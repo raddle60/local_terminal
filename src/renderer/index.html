@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'">
+  <title>Local Terminal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <span>Profiles</span>
+      </div>
+      <div id="profile-tree" class="profile-tree-container"></div>
+    </div>
+    <div class="main-content">
+      <div id="tab-bar" class="tab-bar"></div>
+      <div id="terminal-container" class="terminal-container"></div>
+    </div>
+  </div>
+  <script src="index.js"></script>
+</body>
+</html>
