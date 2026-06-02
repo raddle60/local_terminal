@@ -5,7 +5,8 @@
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "npm run build && electron .",
-    "build": "tsc",
+    "build": "tsc && npm run copy-assets",
+    "copy-assets": "node scripts/copy-assets.js",
     "start": "electron ."
   },
   "devDependencies": {
