@@ -1,0 +1,47 @@
+{
+  "profileTree": [
+    {
+      "id": "folder-dev",
+      "name": "开发环境",
+      "type": "folder",
+      "children": [
+        {
+          "id": "profile-powershell",
+          "name": "PowerShell",
+          "type": "profile",
+          "icon": null,
+          "config": {
+            "shell": "powershell.exe",
+            "args": [],
+            "cwd": "%USERPROFILE%",
+            "autoScripts": []
+          }
+        },
+        {
+          "id": "profile-cmd",
+          "name": "CMD",
+          "type": "profile",
+          "icon": null,
+          "config": {
+            "shell": "cmd.exe",
+            "args": [],
+            "cwd": "%USERPROFILE%",
+            "autoScripts": []
+          }
+        },
+        {
+          "id": "profile-git-bash",
+          "name": "Git Bash",
+          "type": "profile",
+          "icon": null,
+          "config": {
+            "shell": "C:\\Program Files\\Git\\bin\\bash.exe",
+            "args": [],
+            "cwd": "%USERPROFILE%",
+            "autoScripts": []
+          }
+        }
+      ]
+    }
+  ]
+}
