@@ -92,6 +92,34 @@ class App {
         }
       }
     });
+
+    // Add profile button handler
+    const addProfileBtn = document.getElementById('add-profile-btn');
+    if (addProfileBtn) {
+      addProfileBtn.addEventListener('click', () => {
+        this.addNewProfile();
+      });
+    }
+  }
+
+  private addNewProfile(): void {
+    const newProfile = {
+      id: `profile-${Date.now()}`,
+      name: 'New Profile',
+      type: 'profile' as const,
+      icon: null,
+      config: {
+        shell: 'powershell.exe',
+        args: [],
+        cwd: process.env.USERPROFILE || 'C:\\Users\\' + (process.env.USERNAME || 'User'),
+        autoScripts: [],
+      },
+    };
+
+    // Add to first folder found, or create a folder
+    const profiles = window.shellAPI.loadProfiles ? [] : [];
+    // For now, just reload profiles - the new profile won't persist until saved
+    console.log('Add new profile:', newProfile);
   }
 
   private async createShell(node: ProfileNode): Promise<void> {

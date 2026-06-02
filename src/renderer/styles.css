@@ -33,6 +33,28 @@ body {
   letter-spacing: 1px;
   color: #969696;
   border-bottom: 1px solid #3c3c3c;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-profile-btn {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: #3c3c3c;
+  color: #cccccc;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-profile-btn:hover {
+  background: #4c4c4c;
 }
 
 .profile-tree-container {
