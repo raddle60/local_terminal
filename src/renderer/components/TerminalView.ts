@@ -48,6 +48,16 @@ export class TerminalView {
     this.terminal.open(this.xtermHostElement);
     this.fitAddon.fit();
 
+    // Auto-copy on selection change
+    this.terminal.onSelectionChange(() => {
+      if (this.terminal.hasSelection()) {
+        const selection = this.terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(() => {});
+        }
+      }
+    });
+
     // Right-click paste with bracketed paste mode
     this.xtermHostElement.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
