@@ -33,12 +33,15 @@ export class TerminalView {
     const parent = document.getElementById(parentContainerId)!;
     parent.appendChild(this.element);
 
-    // Create terminal - use minimal options to let shell handle selection natively
+    // Create terminal with theme that has transparent selection
     this.terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
       convertEol: true,
+      theme: {
+        selectionBackground: 'rgba(0, 0, 0, 0.3)',
+      },
     });
 
     this.fitAddon = new FitAddon();
