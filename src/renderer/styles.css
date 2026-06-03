@@ -255,13 +255,13 @@ body {
   visibility: hidden;
 }
 
-/* Override xterm selection to be semi-transparent */
+/* Override xterm selection to be transparent - shell handles its own selection */
 .terminal-instance .xterm-selection {
-  background-color: rgba(0, 0, 0, 0.3) !important;
+  background-color: transparent !important;
 }
 
 .terminal-instance .xterm-selection div {
-  background-color: rgba(0, 0, 0, 0.3) !important;
+  background-color: transparent !important;
 }
 
 /* Terminal wrapper - matches VSCode structure */
