@@ -177,9 +177,10 @@ export class PtyManager {
 
     const hasActiveShells = Array.from(this.shells.values()).some(s => s.isOutputting);
     const title = hasActiveShells
-      ? 'Local Terminal ● 输出中'
-      : 'Local Terminal';
+      ? 'Terminal ● 输出中'
+      : 'Terminal';
     mainWindow.setTitle(title);
+    mainWindow.webContents.send('window:titleChanged', title);
   }
 
   write(shellId: string, data: string): void {

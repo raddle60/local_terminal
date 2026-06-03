@@ -80,7 +80,25 @@ export class TabBar {
 
       const icon = document.createElement('span');
       icon.className = 'tab-icon';
-      icon.textContent = tab.shellIcon;
+
+      // Check if shellIcon is an image path (URL, data URI, or local file path)
+      const isImagePath = tab.shellIcon && (
+        tab.shellIcon.startsWith('http') ||
+        tab.shellIcon.startsWith('data:') ||
+        tab.shellIcon.startsWith('file:') ||
+        /^[a-zA-Z]:[/\\]/.test(tab.shellIcon) // Windows path like C:\ or D:\
+      );
+
+      if (isImagePath) {
+        const iconImg = document.createElement('img');
+        iconImg.src = tab.shellIcon;
+        iconImg.alt = 'icon';
+        iconImg.style.width = '16px';
+        iconImg.style.height = '16px';
+        icon.appendChild(iconImg);
+      } else {
+        icon.textContent = tab.shellIcon;
+      }
 
       const name = document.createElement('span');
       name.className = 'tab-name';

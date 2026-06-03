@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -160,5 +160,26 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle('app:getHomeDir', () => {
     return process.env.USERPROFILE || process.env.HOME || 'C:\\';
+  });
+
+  ipcMain.on('window:minimize', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) win.minimize();
+  });
+
+  ipcMain.on('window:maximize', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) {
+      if (win.isMaximized()) {
+        win.unmaximize();
+      } else {
+        win.maximize();
+      }
+    }
+  });
+
+  ipcMain.on('window:close', () => {
+    const win = BrowserWindow.getFocusedWindow();
+    if (win) win.close();
   });
 }

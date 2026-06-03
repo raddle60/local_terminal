@@ -23,12 +23,16 @@ export interface ShellAPI {
   onShellExit: (callback: (shellId: string, exitCode: number) => void) => void;
   onShellOutputStart: (callback: (shellId: string) => void) => void;
   onShellOutputEnd: (callback: (shellId: string) => void) => void;
+  onWindowTitleChanged: (callback: (title: string) => void) => void;
   loadProfiles: () => Promise<ProfileConfig[]>;
   saveProfiles: (profiles: ProfileConfig[]) => Promise<void>;
   createProfile: (profile: ProfileConfig, parentId?: string) => Promise<boolean>;
   updateProfile: (profile: ProfileConfig) => Promise<boolean>;
   deleteProfile: (id: string) => Promise<boolean>;
   getHomeDir: () => Promise<string>;
+  minimizeWindow: () => void;
+  maximizeWindow: () => void;
+  closeWindow: () => void;
 }
 
 const shellAPI: ShellAPI = {
@@ -48,12 +52,18 @@ const shellAPI: ShellAPI = {
   onShellOutputEnd: (callback) => {
     ipcRenderer.on('shell:output-end', (_event, shellId) => callback(shellId));
   },
+  onWindowTitleChanged: (callback) => {
+    ipcRenderer.on('window:titleChanged', (_event, title) => callback(title));
+  },
   loadProfiles: () => ipcRenderer.invoke('profile:load'),
   saveProfiles: (profiles) => ipcRenderer.invoke('profile:save', profiles),
   createProfile: (profile, parentId) => ipcRenderer.invoke('profile:create', profile, parentId),
   updateProfile: (profile) => ipcRenderer.invoke('profile:update', profile),
   deleteProfile: (id) => ipcRenderer.invoke('profile:delete', id),
   getHomeDir: () => ipcRenderer.invoke('app:getHomeDir'),
+  minimizeWindow: () => ipcRenderer.send('window:minimize'),
+  maximizeWindow: () => ipcRenderer.send('window:maximize'),
+  closeWindow: () => ipcRenderer.send('window:close'),
 };
 
 contextBridge.exposeInMainWorld('shellAPI', shellAPI);

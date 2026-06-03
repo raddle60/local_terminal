@@ -10,6 +10,52 @@ body {
   color: #cccccc;
   overflow: hidden;
   height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom Title Bar */
+.title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 32px;
+  background: #1e1e1e;
+  color: #cccccc;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+.title-bar-title {
+  padding-left: 12px;
+  font-size: 12px;
+}
+
+.title-bar-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-btn {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #cccccc;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.title-bar-btn:hover {
+  background: #3c3c3c;
+}
+
+.title-bar-btn-close:hover {
+  background: #dc3545;
+  color: white;
 }
 
 .app-container {
@@ -149,7 +195,7 @@ body {
 
 .tab.active {
   background: #2d2d2d;
-  border-top: 2px solid #0078d4;
+  border-top: 3px solid #0078d4;
 }
 
 .tab.outputting::before {

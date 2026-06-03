@@ -27,12 +27,16 @@ declare global {
       onShellExit: (callback: (shellId: string, exitCode: number) => void) => void;
       onShellOutputStart: (callback: (shellId: string) => void) => void;
       onShellOutputEnd: (callback: (shellId: string) => void) => void;
+      onWindowTitleChanged: (callback: (title: string) => void) => void;
       loadProfiles: () => Promise<ProfileNode[]>;
       saveProfiles: (profiles: ProfileNode[]) => Promise<void>;
       createProfile: (profile: ProfileNode, parentId?: string) => Promise<boolean>;
       updateProfile: (profile: ProfileNode) => Promise<boolean>;
       deleteProfile: (id: string) => Promise<boolean>;
       getHomeDir: () => Promise<string>;
+      minimizeWindow: () => void;
+      maximizeWindow: () => void;
+      closeWindow: () => void;
     };
   }
 }
@@ -104,6 +108,13 @@ class App {
       this.tabBar.setTabOutputting(shellId, false);
     });
 
+    window.shellAPI.onWindowTitleChanged((title) => {
+      const titleEl = document.querySelector('.title-bar-title');
+      if (titleEl) {
+        titleEl.textContent = title;
+      }
+    });
+
     window.addEventListener('resize', () => {
       // Debounce resize to prevent fit() from being called too frequently
       if (this.resizeTimeout !== null) {
@@ -129,6 +140,21 @@ class App {
       addProfileBtn.addEventListener('click', async () => {
         await this.showAddProfileDialog();
       });
+    }
+
+    // Title bar controls
+    const btnMinimize = document.getElementById('btn-minimize');
+    const btnMaximize = document.getElementById('btn-maximize');
+    const btnClose = document.getElementById('btn-close');
+
+    if (btnMinimize) {
+      btnMinimize.addEventListener('click', () => window.shellAPI.minimizeWindow());
+    }
+    if (btnMaximize) {
+      btnMaximize.addEventListener('click', () => window.shellAPI.maximizeWindow());
+    }
+    if (btnClose) {
+      btnClose.addEventListener('click', () => window.shellAPI.closeWindow());
     }
 
     // Dialog event handlers
@@ -376,7 +402,7 @@ class App {
     this.tabBar.addTab({
       id: tabId,
       name: tabName,
-      shellIcon: this.getShellIcon(node.config?.shell),
+      shellIcon: node.icon || this.getShellIcon(node.config?.shell),
       isActive: true,
       isOutputting: false,
       isDisconnected: false,
