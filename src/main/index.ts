@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import { setupIpcHandlers } from './ipc-handlers';
+import { ptyManager } from './pty-manager';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -34,6 +35,8 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  // Close all PTY shells before quitting
+  ptyManager.closeAll();
   if (process.platform !== 'darwin') {
     app.quit();
   }

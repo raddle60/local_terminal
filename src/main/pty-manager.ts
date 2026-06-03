@@ -133,7 +133,7 @@ export class PtyManager {
         mainWindow.webContents.send('shell:output-end', shellId);
         this.updateWindowTitle(false);
       }
-    }, 500);
+    }, 1000);
   }
 
   private handleExit(shellId: string, exitCode: number): void {
@@ -178,6 +178,16 @@ export class PtyManager {
       }
       this.shells.delete(shellId);
     }
+  }
+
+  closeAll(): void {
+    for (const [shellId, instance] of this.shells) {
+      instance.pty.kill();
+      if (instance.outputTimer) {
+        clearTimeout(instance.outputTimer);
+      }
+    }
+    this.shells.clear();
   }
 }
 

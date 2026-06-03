@@ -90,7 +90,7 @@ class App {
     });
 
     window.shellAPI.onShellExit((shellId, exitCode) => {
-      this.tabBar.setTabDisconnected(shellId, true);
+      this.closeTab(shellId);
     });
 
     window.shellAPI.onShellOutputStart((shellId) => {
