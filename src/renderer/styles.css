@@ -216,10 +216,24 @@ body {
   left: 0;
   right: 0;
   top: 0;
+  overflow: hidden;
 }
 
 .terminal-instance.active {
   z-index: 1;
+}
+
+/* Let xterm manage its own overflow */
+.terminal-instance .xterm {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+.terminal-instance .xterm-viewport {
+  position: relative !important;
+  overflow-y: auto !important;
+  overflow-x: hidden;
 }
 
 /* Xterm textarea should be invisible and off-screen when not in use */
