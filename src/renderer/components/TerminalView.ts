@@ -42,6 +42,14 @@ export class TerminalView {
     return this.element;
   }
 
+  focus(): void {
+    this.terminal.focus();
+  }
+
+  clearSelection(): void {
+    this.terminal.clearSelection();
+  }
+
   write(data: string): void {
     this.terminal.write(data);
   }

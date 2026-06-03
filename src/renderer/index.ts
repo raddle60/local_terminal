@@ -64,13 +64,15 @@ class App {
     });
 
     this.tabBar.onClick((tabId) => {
-      // Hide all terminals
+      // Clear selection on all terminals and hide them
       this.terminals.forEach((t, id) => {
+        t.clearSelection();
         t.getElement().style.display = id === tabId ? 'block' : 'none';
       });
       this.tabBar.setActiveTab(tabId);
       const terminal = this.terminals.get(tabId);
       if (terminal) {
+        terminal.focus();
         terminal.fit();
       }
     });
