@@ -1,5 +1,10 @@
 import * as pty from 'node-pty';
+import * as path from 'path';
 import { getMainWindow } from './index';
+
+function expandEnvVars(p: string): string {
+  return p.replace(/%([^%]+)%/g, (_, name) => process.env[name] || '');
+}
 
 interface AutoScript {
   command: string;
@@ -28,7 +33,7 @@ export class PtyManager {
     const shellId = `${profileId}-${this.shellCounter++}`;
 
     const shell = pty.spawn(config.shell, config.args, {
-      cwd: config.cwd,
+      cwd: expandEnvVars(config.cwd),
       env: process.env as { [key: string]: string },
     });
 
