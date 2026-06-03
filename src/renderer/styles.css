@@ -255,12 +255,12 @@ body {
   visibility: hidden;
 }
 
-/* Override xterm DOM renderer selection to be semi-transparent */
-.terminal-instance .xterm-dom-renderer-owner-1 .xterm-selection {
+/* Override xterm selection to be semi-transparent */
+.terminal-instance .xterm-selection {
   background-color: rgba(0, 0, 0, 0.3) !important;
 }
 
-.terminal-instance .xterm-dom-renderer-owner-1 .xterm-selection div {
+.terminal-instance .xterm-selection div {
   background-color: rgba(0, 0, 0, 0.3) !important;
 }
 
