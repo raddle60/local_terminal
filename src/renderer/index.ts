@@ -64,6 +64,10 @@ class App {
     });
 
     this.tabBar.onClick((tabId) => {
+      // Hide all terminals
+      this.terminals.forEach((t, id) => {
+        t.getElement().style.display = id === tabId ? 'block' : 'none';
+      });
       this.tabBar.setActiveTab(tabId);
       const terminal = this.terminals.get(tabId);
       if (terminal) {
@@ -211,6 +215,11 @@ class App {
     const tabId = await window.shellAPI.createShell(node.id, node.config);
     const tabName = `${node.name} ${++this.tabCounter}`;
 
+    // Hide all existing terminals
+    this.terminals.forEach((t) => {
+      t.getElement().style.display = 'none';
+    });
+
     this.tabBar.addTab({
       id: tabId,
       name: tabName,
@@ -221,6 +230,7 @@ class App {
     });
 
     const terminalView = new TerminalView('terminal-container', tabId);
+    terminalView.getElement().style.display = 'block';
     terminalView.onData((data) => {
       window.shellAPI.writeToShell(tabId, data);
     });

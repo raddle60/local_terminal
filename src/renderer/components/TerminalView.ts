@@ -5,12 +5,22 @@ import 'xterm/css/xterm.css';
 export class TerminalView {
   private terminal: Terminal;
   private fitAddon: FitAddon;
-  private container: HTMLElement;
+  private element: HTMLElement;
   private shellId: string;
 
-  constructor(containerId: string, shellId: string) {
+  constructor(parentContainerId: string, shellId: string) {
     this.shellId = shellId;
-    this.container = document.getElementById(containerId)!;
+
+    // Create a unique container for this terminal
+    this.element = document.createElement('div');
+    this.element.id = `terminal-${shellId}`;
+    this.element.style.width = '100%';
+    this.element.style.height = '100%';
+    this.element.style.display = 'none';
+
+    const parent = document.getElementById(parentContainerId)!;
+    parent.appendChild(this.element);
+
     this.terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
@@ -20,12 +30,16 @@ export class TerminalView {
     });
     this.fitAddon = new FitAddon();
     this.terminal.loadAddon(this.fitAddon);
-    this.terminal.open(this.container);
+    this.terminal.open(this.element);
     this.fitAddon.fit();
   }
 
   getShellId(): string {
     return this.shellId;
+  }
+
+  getElement(): HTMLElement {
+    return this.element;
   }
 
   write(data: string): void {
@@ -46,5 +60,6 @@ export class TerminalView {
 
   dispose(): void {
     this.terminal.dispose();
+    this.element.remove();
   }
 }
