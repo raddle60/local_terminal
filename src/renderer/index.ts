@@ -32,6 +32,7 @@ declare global {
       createProfile: (profile: ProfileNode, parentId?: string) => Promise<boolean>;
       updateProfile: (profile: ProfileNode) => Promise<boolean>;
       deleteProfile: (id: string) => Promise<boolean>;
+      getHomeDir: () => Promise<string>;
     };
   }
 }
@@ -61,6 +62,8 @@ class App {
         this.showEditProfileDialog(node);
       } else if (action === 'delete') {
         this.handleProfileDelete(node);
+      } else if (action === 'copy') {
+        this.showCopyProfileDialog(node);
       }
     });
 
@@ -123,8 +126,8 @@ class App {
     // Add profile button handler
     const addProfileBtn = document.getElementById('add-profile-btn');
     if (addProfileBtn) {
-      addProfileBtn.addEventListener('click', () => {
-        this.showAddProfileDialog();
+      addProfileBtn.addEventListener('click', async () => {
+        await this.showAddProfileDialog();
       });
     }
 
@@ -141,18 +144,49 @@ class App {
     });
 
     dialogSave.addEventListener('click', () => this.saveProfileDialog());
+
+    // Confirm dialog event handlers
+    const confirmDialog = document.getElementById('confirm-dialog')!;
+    const confirmCancel = document.getElementById('confirm-cancel')!;
+    const confirmOk = document.getElementById('confirm-ok')!;
+
+    confirmCancel.addEventListener('click', () => this.hideConfirmDialog(false));
+    confirmOk.addEventListener('click', () => this.hideConfirmDialog(true));
+    confirmDialog.addEventListener('click', (e) => {
+      if (e.target === confirmDialog) this.hideConfirmDialog(false);
+    });
   }
 
-  private dialogMode: 'add' | 'edit' = 'add';
+  private confirmResolve: ((result: boolean) => void) | null = null;
+
+  private showConfirmDialog(title: string, message: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.confirmResolve = resolve;
+      document.getElementById('confirm-title')!.textContent = title;
+      document.getElementById('confirm-message')!.textContent = message;
+      document.getElementById('confirm-dialog')!.classList.remove('hidden');
+    });
+  }
+
+  private hideConfirmDialog(result: boolean): void {
+    document.getElementById('confirm-dialog')!.classList.add('hidden');
+    if (this.confirmResolve) {
+      this.confirmResolve(result);
+      this.confirmResolve = null;
+    }
+  }
+
+  private dialogMode: 'add' | 'edit' | 'copy' = 'add';
   private editingProfile: ProfileNode | null = null;
 
-  private showAddProfileDialog(): void {
+  private async showAddProfileDialog(): Promise<void> {
     this.dialogMode = 'add';
     this.editingProfile = null;
     document.getElementById('dialog-title')!.textContent = '新增 Profile';
     (document.getElementById('profile-name') as HTMLInputElement).value = '';
-    (document.getElementById('profile-shell') as HTMLInputElement).value = 'powershell.exe';
-    (document.getElementById('profile-cwd') as HTMLInputElement).value = process.env.USERPROFILE || 'C:\\';
+    (document.getElementById('profile-shell') as HTMLInputElement).value = '';
+    const homeDir = await window.shellAPI.getHomeDir();
+    (document.getElementById('profile-cwd') as HTMLInputElement).value = homeDir;
     document.getElementById('profile-dialog')!.classList.remove('hidden');
   }
 
@@ -161,6 +195,16 @@ class App {
     this.editingProfile = node;
     document.getElementById('dialog-title')!.textContent = '编辑 Profile';
     (document.getElementById('profile-name') as HTMLInputElement).value = node.name;
+    (document.getElementById('profile-shell') as HTMLInputElement).value = node.config?.shell || '';
+    (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
+    document.getElementById('profile-dialog')!.classList.remove('hidden');
+  }
+
+  private showCopyProfileDialog(node: ProfileNode): void {
+    this.dialogMode = 'copy';
+    this.editingProfile = null;
+    document.getElementById('dialog-title')!.textContent = '复制 Profile';
+    (document.getElementById('profile-name') as HTMLInputElement).value = `Copy of ${node.name}`;
     (document.getElementById('profile-shell') as HTMLInputElement).value = node.config?.shell || '';
     (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
     document.getElementById('profile-dialog')!.classList.remove('hidden');
@@ -180,7 +224,7 @@ class App {
       return;
     }
 
-    if (this.dialogMode === 'add') {
+    if (this.dialogMode === 'add' || this.dialogMode === 'copy') {
       const newProfile: ProfileNode = {
         id: `profile-${Date.now()}`,
         name,
@@ -212,7 +256,8 @@ class App {
   }
 
   private async handleProfileDelete(node: ProfileNode): Promise<void> {
-    if (confirm(`确定要删除 Profile "${node.name}" 吗？`)) {
+    const confirmed = await this.showConfirmDialog('确认', `确定要删除 Profile "${node.name}" 吗？`);
+    if (confirmed) {
       await window.shellAPI.deleteProfile(node.id);
       await this.reloadProfiles();
     }

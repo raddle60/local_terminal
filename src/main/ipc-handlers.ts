@@ -1,9 +1,10 @@
 import { ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { ptyManager } from './pty-manager';
 
-const profilesPath = path.join(__dirname, '../../profiles.json');
+const profilesPath = path.join(os.homedir(), '.local_terminal_profiles.json');
 
 interface ProfileConfig {
   id: string;
@@ -41,50 +42,9 @@ function saveProfiles(profiles: ProfileConfig[]): void {
 }
 
 function getDefaultProfiles(): ProfileConfig[] {
+  const homeDir = os.homedir();
   return [
-    {
-      id: 'folder-dev',
-      name: '开发环境',
-      type: 'folder',
-      children: [
-        {
-          id: 'profile-powershell',
-          name: 'PowerShell',
-          type: 'profile',
-          icon: null,
-          config: {
-            shell: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-            args: [],
-            cwd: process.env.USERPROFILE || 'C:\\Users\\' + process.env.USERNAME,
-            autoScripts: [],
-          },
-        },
-        {
-          id: 'profile-cmd',
-          name: 'CMD',
-          type: 'profile',
-          icon: null,
-          config: {
-            shell: 'C:\\Windows\\System32\\cmd.exe',
-            args: [],
-            cwd: process.env.USERPROFILE || 'C:\\Users\\' + process.env.USERNAME,
-            autoScripts: [],
-          },
-        },
-        {
-          id: 'profile-git-bash',
-          name: 'Git Bash',
-          type: 'profile',
-          icon: null,
-          config: {
-            shell: 'C:\\Program Files\\Git\\git-bash.exe',
-            args: [],
-            cwd: process.env.USERPROFILE || 'C:\\Users\\' + process.env.USERNAME,
-            autoScripts: [],
-          },
-        },
-      ],
-    },
+    
   ];
 }
 
@@ -196,5 +156,9 @@ export function setupIpcHandlers(): void {
 
   ipcMain.on('shell:close', (_event, shellId: string) => {
     ptyManager.close(shellId);
+  });
+
+  ipcMain.handle('app:getHomeDir', () => {
+    return process.env.USERPROFILE || process.env.HOME || 'C:\\';
   });
 }

@@ -13,7 +13,7 @@ interface ProfileNode {
 }
 
 type TreeListener = (node: ProfileNode) => void;
-type ContextMenuListener = (node: ProfileNode, action: 'edit' | 'delete') => void;
+type ContextMenuListener = (node: ProfileNode, action: 'edit' | 'delete' | 'copy') => void;
 
 export class ProfileTree {
   private container: HTMLElement;
@@ -138,6 +138,14 @@ export class ProfileTree {
       this.hideContextMenu();
     });
 
+    const copyItem = document.createElement('div');
+    copyItem.className = 'context-menu-item';
+    copyItem.textContent = '复制';
+    copyItem.addEventListener('click', () => {
+      this.contextMenuListeners.forEach(l => l(node, 'copy'));
+      this.hideContextMenu();
+    });
+
     const deleteItem = document.createElement('div');
     deleteItem.className = 'context-menu-item danger';
     deleteItem.textContent = '删除';
@@ -147,6 +155,7 @@ export class ProfileTree {
     });
 
     this.contextMenu.appendChild(editItem);
+    this.contextMenu.appendChild(copyItem);
     this.contextMenu.appendChild(deleteItem);
     this.contextMenu.style.left = `${x}px`;
     this.contextMenu.style.top = `${y}px`;

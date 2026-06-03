@@ -37,6 +37,9 @@ export class TerminalView {
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
+      theme: {
+        background: '#2d2d2d',
+      },
     });
 
     this.fitAddon = new FitAddon();

@@ -28,6 +28,7 @@ export interface ShellAPI {
   createProfile: (profile: ProfileConfig, parentId?: string) => Promise<boolean>;
   updateProfile: (profile: ProfileConfig) => Promise<boolean>;
   deleteProfile: (id: string) => Promise<boolean>;
+  getHomeDir: () => Promise<string>;
 }
 
 const shellAPI: ShellAPI = {
@@ -52,6 +53,7 @@ const shellAPI: ShellAPI = {
   createProfile: (profile, parentId) => ipcRenderer.invoke('profile:create', profile, parentId),
   updateProfile: (profile) => ipcRenderer.invoke('profile:update', profile),
   deleteProfile: (id) => ipcRenderer.invoke('profile:delete', id),
+  getHomeDir: () => ipcRenderer.invoke('app:getHomeDir'),
 };
 
 contextBridge.exposeInMainWorld('shellAPI', shellAPI);
