@@ -216,16 +216,22 @@ body {
   left: 0;
   right: 0;
   top: 0;
-  pointer-events: none; /* Disable mouse events for all terminals */
 }
 
 .terminal-instance.active {
   z-index: 1;
-  pointer-events: auto; /* Only active terminal receives mouse events */
 }
 
-/* Disable IME helpers for inactive terminals */
-.terminal-instance:not(.active) .xterm-helpers {
+/* Hide xterm.js IME helper elements - they should not be visible or take space */
+.terminal-instance .xterm-helpers {
+  display: none !important;
+}
+
+.terminal-instance .composition-view {
+  display: none !important;
+}
+
+.terminal-instance .xterm-width-cache-measure-container {
   display: none !important;
 }
 
