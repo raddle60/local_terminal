@@ -84,15 +84,25 @@ export class ProfileTree {
         const profileContent = document.createElement('div');
         profileContent.className = 'profile-content';
 
-        const icon = document.createElement('span');
-        icon.className = 'profile-icon';
-        icon.textContent = this.getShellIcon(node.config?.shell);
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'profile-icon';
+
+        if (node.icon) {
+          const iconImg = document.createElement('img');
+          iconImg.src = node.icon;
+          iconImg.alt = 'icon';
+          iconImg.style.width = '16px';
+          iconImg.style.height = '16px';
+          iconSpan.appendChild(iconImg);
+        } else {
+          iconSpan.textContent = this.getShellIcon(node.config?.shell);
+        }
 
         const name = document.createElement('span');
         name.className = 'profile-name';
         name.textContent = node.name;
 
-        profileContent.appendChild(icon);
+        profileContent.appendChild(iconSpan);
         profileContent.appendChild(name);
 
         profileContent.addEventListener('dblclick', () => {

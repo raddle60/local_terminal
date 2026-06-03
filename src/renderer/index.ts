@@ -188,6 +188,7 @@ class App {
     this.editingProfile = null;
     document.getElementById('dialog-title')!.textContent = '新增 Profile';
     (document.getElementById('profile-name') as HTMLInputElement).value = '';
+    (document.getElementById('profile-icon') as HTMLInputElement).value = '';
     (document.getElementById('profile-shell') as HTMLInputElement).value = '';
     const homeDir = await window.shellAPI.getHomeDir();
     (document.getElementById('profile-cwd') as HTMLInputElement).value = homeDir;
@@ -200,6 +201,7 @@ class App {
     this.editingProfile = node;
     document.getElementById('dialog-title')!.textContent = '编辑 Profile';
     (document.getElementById('profile-name') as HTMLInputElement).value = node.name;
+    (document.getElementById('profile-icon') as HTMLInputElement).value = node.icon || '';
     (document.getElementById('profile-shell') as HTMLInputElement).value = node.config?.shell || '';
     (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
     this.renderAutoScripts(node.config?.autoScripts || []);
@@ -211,6 +213,7 @@ class App {
     this.editingProfile = null;
     document.getElementById('dialog-title')!.textContent = '复制 Profile';
     (document.getElementById('profile-name') as HTMLInputElement).value = `Copy of ${node.name}`;
+    (document.getElementById('profile-icon') as HTMLInputElement).value = node.icon || '';
     (document.getElementById('profile-shell') as HTMLInputElement).value = node.config?.shell || '';
     (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
     this.renderAutoScripts(node.config?.autoScripts || []);
@@ -305,6 +308,7 @@ class App {
 
   private async saveProfileDialog(): Promise<void> {
     const name = (document.getElementById('profile-name') as HTMLInputElement).value.trim();
+    const icon = (document.getElementById('profile-icon') as HTMLInputElement).value.trim() || null;
     const shell = (document.getElementById('profile-shell') as HTMLInputElement).value.trim();
     const cwd = (document.getElementById('profile-cwd') as HTMLInputElement).value.trim();
 
@@ -319,7 +323,7 @@ class App {
         id: `profile-${Date.now()}`,
         name,
         type: 'profile',
-        icon: null,
+        icon,
         config: {
           shell,
           args: [],
@@ -332,6 +336,7 @@ class App {
       const updatedProfile: ProfileNode = {
         ...this.editingProfile,
         name,
+        icon,
         config: {
           ...this.editingProfile.config!,
           shell,
