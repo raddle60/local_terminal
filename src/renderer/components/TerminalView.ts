@@ -30,6 +30,16 @@ export class TerminalView {
       windowsMode: true,
       convertEol: true,
     });
+
+    // Hide xterm.js selection highlight via CSS
+    // Selection functionality still works but no visible highlight
+    const style = document.createElement('style');
+    style.textContent = `
+      #terminal-${shellId} .xterm-selection {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
     this.fitAddon = new FitAddon();
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.open(this.element);
