@@ -113,6 +113,8 @@ class App {
           const terminal = this.terminals.get(activeTabId);
           if (terminal) {
             terminal.fit();
+            const dims = terminal.getDimensions();
+            window.shellAPI.resizeShell(activeTabId, dims.cols, dims.rows);
           }
         }
       }, 100);
@@ -250,6 +252,8 @@ class App {
     // Resize after a short delay to ensure container is rendered
     setTimeout(() => {
       terminalView.fit();
+      const dims = terminalView.getDimensions();
+      window.shellAPI.resizeShell(tabId, dims.cols, dims.rows);
     }, 100);
   }
 

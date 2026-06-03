@@ -95,7 +95,7 @@ export class TerminalView {
 
   onData(callback: (data: string) => void): void {
     this.onDataCallback = callback;
-    this.terminal.onData(callback);
+    this.terminal.onData(this.onDataCallback);
   }
 
   resize(cols: number, rows: number): void {
@@ -108,6 +108,13 @@ export class TerminalView {
 
   setActive(active: boolean): void {
     this.element.classList.toggle('active', active);
+  }
+
+  getDimensions(): { cols: number; rows: number } {
+    return {
+      cols: this.terminal.cols,
+      rows: this.terminal.rows
+    };
   }
 
   dispose(): void {
