@@ -53,7 +53,7 @@ function getDefaultProfiles(): ProfileConfig[] {
           type: 'profile',
           icon: null,
           config: {
-            shell: 'powershell.exe',
+            shell: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
             args: [],
             cwd: process.env.USERPROFILE || 'C:\\Users\\' + process.env.USERNAME,
             autoScripts: [],
@@ -65,7 +65,7 @@ function getDefaultProfiles(): ProfileConfig[] {
           type: 'profile',
           icon: null,
           config: {
-            shell: 'cmd.exe',
+            shell: 'C:\\Windows\\System32\\cmd.exe',
             args: [],
             cwd: process.env.USERPROFILE || 'C:\\Users\\' + process.env.USERNAME,
             autoScripts: [],
@@ -77,7 +77,7 @@ function getDefaultProfiles(): ProfileConfig[] {
           type: 'profile',
           icon: null,
           config: {
-            shell: 'C:\\Program Files\\Git\\bin\\bash.exe',
+            shell: 'C:\\Program Files\\Git\\git-bash.exe',
             args: [],
             cwd: process.env.USERPROFILE || 'C:\\Users\\' + process.env.USERNAME,
             autoScripts: [],
