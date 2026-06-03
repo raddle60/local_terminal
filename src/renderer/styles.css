@@ -255,6 +255,12 @@ body {
   visibility: hidden;
 }
 
+/* Xterm viewport needs overflow for scrolling */
+.terminal-instance .xterm-viewport {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+}
+
 /* Override xterm selection to be transparent - shell handles its own selection */
 .terminal-instance .xterm-selection {
   background-color: transparent !important;
