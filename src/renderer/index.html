@@ -25,7 +25,7 @@
 
   <!-- Profile Dialog -->
   <div id="profile-dialog" class="dialog-overlay hidden">
-    <div class="dialog">
+    <div class="dialog dialog-large">
       <div class="dialog-header">
         <span id="dialog-title" class="dialog-title">Profile</span>
         <button id="dialog-close" class="dialog-close">×</button>
@@ -42,6 +42,13 @@
         <div class="form-group">
           <label class="form-label">启动目录</label>
           <input type="text" id="profile-cwd" class="form-input">
+        </div>
+        <div class="form-group">
+          <div class="form-label-row">
+            <label class="form-label">自动脚本</label>
+            <button id="add-script-btn" class="btn-small">+ 添加</button>
+          </div>
+          <div id="auto-scripts-container" class="auto-scripts-container"></div>
         </div>
       </div>
       <div class="dialog-footer">

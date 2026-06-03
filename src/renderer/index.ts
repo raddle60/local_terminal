@@ -145,6 +145,10 @@ class App {
 
     dialogSave.addEventListener('click', () => this.saveProfileDialog());
 
+    // Auto-scripts event handler
+    const addScriptBtn = document.getElementById('add-script-btn')!;
+    addScriptBtn.addEventListener('click', () => this.addAutoScript());
+
     // Confirm dialog event handlers
     const confirmDialog = document.getElementById('confirm-dialog')!;
     const confirmCancel = document.getElementById('confirm-cancel')!;
@@ -187,6 +191,7 @@ class App {
     (document.getElementById('profile-shell') as HTMLInputElement).value = '';
     const homeDir = await window.shellAPI.getHomeDir();
     (document.getElementById('profile-cwd') as HTMLInputElement).value = homeDir;
+    this.renderAutoScripts([]);
     document.getElementById('profile-dialog')!.classList.remove('hidden');
   }
 
@@ -197,6 +202,7 @@ class App {
     (document.getElementById('profile-name') as HTMLInputElement).value = node.name;
     (document.getElementById('profile-shell') as HTMLInputElement).value = node.config?.shell || '';
     (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
+    this.renderAutoScripts(node.config?.autoScripts || []);
     document.getElementById('profile-dialog')!.classList.remove('hidden');
   }
 
@@ -207,12 +213,94 @@ class App {
     (document.getElementById('profile-name') as HTMLInputElement).value = `Copy of ${node.name}`;
     (document.getElementById('profile-shell') as HTMLInputElement).value = node.config?.shell || '';
     (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
+    this.renderAutoScripts(node.config?.autoScripts || []);
     document.getElementById('profile-dialog')!.classList.remove('hidden');
   }
 
   private hideDialog(): void {
     document.getElementById('profile-dialog')!.classList.add('hidden');
     this.editingProfile = null;
+  }
+
+  private renderAutoScripts(scripts: Array<{ command: string; waitFor: string | null }>): void {
+    const container = document.getElementById('auto-scripts-container')!;
+    container.innerHTML = '';
+
+    if (scripts.length === 0) {
+      container.innerHTML = '<div class="auto-script-empty">暂无自动脚本</div>';
+      return;
+    }
+
+    scripts.forEach((script, index) => {
+      const item = document.createElement('div');
+      item.className = 'auto-script-item';
+      item.innerHTML = `
+        <input type="text" class="form-input script-command" placeholder="命令" value="${this.escapeHtml(script.command)}">
+        <input type="text" class="form-input script-wait-for" placeholder="等待输出(可选)" value="${this.escapeHtml(script.waitFor || '')}">
+        <button class="auto-script-remove">删除</button>
+      `;
+
+      const removeBtn = item.querySelector('.auto-script-remove')!;
+      removeBtn.addEventListener('click', () => {
+        item.remove();
+        if (container.children.length === 0) {
+          container.innerHTML = '<div class="auto-script-empty">暂无自动脚本</div>';
+        }
+      });
+
+      container.appendChild(item);
+    });
+  }
+
+  private addAutoScript(): void {
+    const container = document.getElementById('auto-scripts-container')!;
+    const emptyMsg = container.querySelector('.auto-script-empty');
+    if (emptyMsg) {
+      emptyMsg.remove();
+    }
+
+    const item = document.createElement('div');
+    item.className = 'auto-script-item';
+    item.innerHTML = `
+      <input type="text" class="form-input script-command" placeholder="命令" value="">
+      <input type="text" class="form-input script-wait-for" placeholder="等待输出(可选)" value="">
+      <button class="auto-script-remove">删除</button>
+    `;
+
+    const removeBtn = item.querySelector('.auto-script-remove')!;
+    removeBtn.addEventListener('click', () => {
+      item.remove();
+      if (container.children.length === 0) {
+        container.innerHTML = '<div class="auto-script-empty">暂无自动脚本</div>';
+      }
+    });
+
+    container.appendChild(item);
+  }
+
+  private escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  private getAutoScriptsFromUI(): Array<{ command: string; waitFor: string | null }> {
+    const container = document.getElementById('auto-scripts-container')!;
+    const items = container.querySelectorAll('.auto-script-item');
+    const scripts: Array<{ command: string; waitFor: string | null }> = [];
+
+    items.forEach(item => {
+      const commandInput = item.querySelector('.script-command') as HTMLInputElement;
+      const waitForInput = item.querySelector('.script-wait-for') as HTMLInputElement;
+      if (commandInput && commandInput.value.trim()) {
+        scripts.push({
+          command: commandInput.value.trim(),
+          waitFor: waitForInput.value.trim() || null,
+        });
+      }
+    });
+
+    return scripts;
   }
 
   private async saveProfileDialog(): Promise<void> {
@@ -224,6 +312,8 @@ class App {
       return;
     }
 
+    const autoScripts = this.getAutoScriptsFromUI();
+
     if (this.dialogMode === 'add' || this.dialogMode === 'copy') {
       const newProfile: ProfileNode = {
         id: `profile-${Date.now()}`,
@@ -234,7 +324,7 @@ class App {
           shell,
           args: [],
           cwd,
-          autoScripts: [],
+          autoScripts,
         },
       };
       await window.shellAPI.createProfile(newProfile);
@@ -246,6 +336,7 @@ class App {
           ...this.editingProfile.config!,
           shell,
           cwd,
+          autoScripts,
         },
       };
       await window.shellAPI.updateProfile(updatedProfile);

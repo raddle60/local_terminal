@@ -290,6 +290,80 @@ body {
   max-width: 350px;
 }
 
+.dialog-large {
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.form-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-small {
+  padding: 2px 8px;
+  font-size: 12px;
+  background: #3c3c3c;
+  color: #cccccc;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-small:hover {
+  background: #4c4c4c;
+}
+
+.auto-scripts-container {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #3c3c3c;
+  border-radius: 4px;
+  background: #1e1e1e;
+}
+
+.auto-script-item {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #3c3c3c;
+  align-items: center;
+}
+
+.auto-script-item:last-child {
+  border-bottom: none;
+}
+
+.auto-script-item .form-input {
+  flex: 1;
+}
+
+.auto-script-item .script-wait-for {
+  width: 150px;
+}
+
+.auto-script-remove {
+  padding: 2px 8px;
+  font-size: 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.auto-script-remove:hover {
+  background: #c82333;
+}
+
+.auto-script-empty {
+  padding: 16px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+}
+
 .dialog-header {
   padding: 16px;
   border-bottom: 1px solid #3c3c3c;
