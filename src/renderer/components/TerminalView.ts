@@ -16,7 +16,9 @@ export class TerminalView {
     this.element.id = `terminal-${shellId}`;
     this.element.style.width = '100%';
     this.element.style.height = '100%';
-    this.element.style.display = 'none';
+    this.element.style.position = 'absolute';
+    this.element.style.top = '0';
+    this.element.style.left = '0';
 
     const parent = document.getElementById(parentContainerId)!;
     parent.appendChild(this.element);

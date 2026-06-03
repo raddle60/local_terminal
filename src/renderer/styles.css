@@ -206,6 +206,7 @@ body {
   background: #1e1e1e;
   padding: 8px;
   overflow: hidden;
+  position: relative;
 }
 
 .terminal-container .xterm {
