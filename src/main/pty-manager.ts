@@ -66,32 +66,59 @@ export class PtyManager {
     const instance = this.shells.get(shellId);
     if (!instance) return;
 
+    let currentTimeout: NodeJS.Timeout | null = null;
+    let currentInterval: NodeJS.Timeout | null = null;
+
     const runNext = () => {
       if (instance.currentScriptIndex >= instance.autoScripts.length) {
         return;
       }
 
+      // Clear previous timer/interval
+      if (currentTimeout) {
+        clearTimeout(currentTimeout);
+        currentTimeout = null;
+      }
+      if (currentInterval) {
+        clearInterval(currentInterval);
+        currentInterval = null;
+      }
+
       const script = instance.autoScripts[instance.currentScriptIndex++];
-      instance.pty.write(script.command + '\r');
 
-      if (script.waitFor) {
-        // Wait for pattern match
+      // If script has waitFor, wait for pattern first, then execute
+      if (script.waitFor !== null && script.waitFor !== undefined && script.waitFor !== '') {
         instance.pendingData = '';
-        const timeout = setTimeout(() => {
-          // Timeout, continue to next script
-          runNext();
-        }, 5000);
 
-        const checkInterval = setInterval(() => {
+        // Timeout - give up waiting
+        currentTimeout = setTimeout(() => {
+          currentInterval = null;
+          currentTimeout = null;
+          instance.pendingData = '';
+          runNext();
+        }, 10000);
+
+        // Check for pattern periodically
+        currentInterval = setInterval(() => {
           if (instance.pendingData.includes(script.waitFor!)) {
-            clearTimeout(timeout);
-            clearInterval(checkInterval);
+            if (currentTimeout) {
+              clearTimeout(currentTimeout);
+              currentTimeout = null;
+            }
+            if (currentInterval) clearInterval(currentInterval);
+            currentInterval = null;
             instance.pendingData = '';
-            runNext();
+
+            // Now execute the command
+            instance.pty.write(script.command + '\r');
+
+            // After executing, wait 100ms then continue to next
+            setTimeout(runNext, 100);
           }
         }, 100);
       } else {
-        // Wait 100ms then next
+        // No waitFor - execute immediately
+        instance.pty.write(script.command + '\r');
         setTimeout(runNext, 100);
       }
     };
