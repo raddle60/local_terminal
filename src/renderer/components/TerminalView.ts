@@ -37,8 +37,6 @@ export class TerminalView {
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
-      convertEol: true,
-      scrollOnUserInput: false,
     });
 
     this.fitAddon = new FitAddon();
@@ -105,14 +103,7 @@ export class TerminalView {
   }
 
   fit(): void {
-    // Save scroll position before fit
-    const viewportElement = this.element.querySelector('.xterm-viewport') as HTMLElement;
-    const scrollTop = viewportElement ? viewportElement.scrollTop : 0;
     this.fitAddon.fit();
-    // Restore scroll position after fit
-    if (viewportElement) {
-      viewportElement.scrollTop = scrollTop;
-    }
   }
 
   setActive(active: boolean): void {
