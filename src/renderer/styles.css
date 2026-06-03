@@ -222,17 +222,37 @@ body {
   z-index: 1;
 }
 
-/* Hide xterm.js IME helper elements - they should not be visible or take space */
-.terminal-instance .xterm-helpers {
-  display: none !important;
+/* Xterm textarea should be invisible and off-screen when not in use */
+.terminal-instance .xterm-helper-textarea {
+  position: absolute;
+  left: -9999em;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: -5;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  resize: none;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
+/* Composition view - only show when active */
 .terminal-instance .composition-view {
-  display: none !important;
+  display: none;
+  position: absolute;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.terminal-instance .composition-view.active {
+  display: block;
 }
 
 .terminal-instance .xterm-width-cache-measure-container {
-  display: none !important;
+  position: absolute;
+  visibility: hidden;
 }
 
 /* Terminal wrapper - matches VSCode structure */
