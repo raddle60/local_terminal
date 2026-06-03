@@ -40,22 +40,20 @@ export class TerminalView {
       rightClickSelectsWord: true,
     });
 
+    // Immediately clear any selection made by xterm - let shell handle selection
+    this.terminal.onSelectionChange(() => {
+      // Small delay to let xterm process the selection first
+      setTimeout(() => {
+        this.terminal.clearSelection();
+      }, 0);
+    });
+
     this.fitAddon = new FitAddon();
     this.terminal.loadAddon(this.fitAddon);
 
     // Open terminal in xterm-host element
     this.terminal.open(this.xtermHostElement);
     this.fitAddon.fit();
-
-    // Auto-copy on selection
-    this.terminal.onSelectionChange(() => {
-      if (this.terminal.hasSelection()) {
-        const selection = this.terminal.getSelection();
-        if (selection) {
-          navigator.clipboard.writeText(selection).catch(() => {});
-        }
-      }
-    });
 
     // Right-click paste with bracketed paste mode
     this.xtermHostElement.addEventListener('contextmenu', async (e) => {
