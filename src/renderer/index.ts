@@ -64,9 +64,10 @@ class App {
     });
 
     this.tabBar.onClick((tabId) => {
-      // Clear selection on all terminals
-      this.terminals.forEach((t) => {
+      // Clear selection on all terminals and set active state
+      this.terminals.forEach((t, id) => {
         t.clearSelection();
+        t.setActive(id === tabId);
       });
       this.tabBar.setActiveTab(tabId);
       const terminal = this.terminals.get(tabId);
@@ -216,6 +217,11 @@ class App {
     const tabId = await window.shellAPI.createShell(node.id, node.config);
     const tabName = `${node.name} ${++this.tabCounter}`;
 
+    // Deactivate all existing terminals
+    this.terminals.forEach((t) => {
+      t.setActive(false);
+    });
+
     this.tabBar.addTab({
       id: tabId,
       name: tabName,
@@ -229,6 +235,7 @@ class App {
     terminalView.onData((data) => {
       window.shellAPI.writeToShell(tabId, data);
     });
+    terminalView.setActive(true);
 
     this.terminals.set(tabId, terminalView);
 
