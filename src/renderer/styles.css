@@ -209,100 +209,23 @@ body {
   position: relative;
 }
 
-/* Terminal instance wrapper */
+/* Terminal instance wrapper - sits inside terminal-container */
 .terminal-instance {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   top: 0;
-  overflow: hidden;
 }
 
 .terminal-instance.active {
   z-index: 1;
 }
 
-/* Let xterm manage its own overflow */
-.terminal-instance .xterm {
-  position: relative;
-  height: 100%;
-  width: 100%;
-}
-
-.terminal-instance .xterm-viewport {
-  position: relative !important;
-  overflow-y: auto !important;
-  overflow-x: hidden;
-}
-
-/* Xterm textarea should be invisible and off-screen when not in use */
-.terminal-instance .xterm-helper-textarea {
-  position: absolute;
-  left: -9999em;
-  top: 0;
-  width: 0;
-  height: 0;
-  z-index: -5;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  resize: none;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-/* Composition view - only show when active */
-.terminal-instance .composition-view {
-  display: none;
-  position: absolute;
-  z-index: 1;
-  white-space: nowrap;
-}
-
-.terminal-instance .composition-view.active {
-  display: block;
-}
-
-.terminal-instance .xterm-width-cache-measure-container {
-  position: absolute;
-  visibility: hidden;
-}
-
-/* Xterm viewport needs overflow for scrolling */
-.terminal-instance .xterm-viewport {
-  overflow-y: auto !important;
-  overflow-x: hidden;
-}
-
-/* Override xterm selection to be transparent - shell handles its own selection */
-.terminal-instance .xterm-selection {
-  background-color: transparent !important;
-}
-
-.terminal-instance .xterm-selection div {
-  background-color: transparent !important;
-}
-
-/* Terminal wrapper - matches VSCode structure */
-.terminal-wrapper {
-  width: 100%;
-  height: 100%;
-}
-
-/* Xterm host */
+/* Xterm host fills the instance */
 .terminal-xterm-host {
   width: 100%;
   height: 100%;
-}
-
-/* Let xterm manage its own sizing within the container */
-.terminal-container .xterm {
-  height: 100%;
-}
-
-.terminal-container .xterm-viewport {
-  overflow-y: auto;
 }
 
 /* Context Menu */
