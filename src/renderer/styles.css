@@ -224,6 +224,11 @@ body {
   pointer-events: auto; /* Only active terminal receives mouse events */
 }
 
+/* Disable IME helpers for inactive terminals */
+.terminal-instance:not(.active) .xterm-helpers {
+  display: none !important;
+}
+
 /* Terminal wrapper - matches VSCode structure */
 .terminal-wrapper {
   width: 100%;
