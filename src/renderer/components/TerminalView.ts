@@ -1,12 +1,13 @@
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import 'xterm/css/xterm.css';
+import { Terminal } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
+import '@xterm/xterm/css/xterm.css';
 
 export class TerminalView {
   private terminal: Terminal;
   private fitAddon: FitAddon;
   private element: HTMLElement;
   private shellId: string;
+  private onDataCallback: (data: string) => void = () => {};
 
   constructor(parentContainerId: string, shellId: string) {
     this.shellId = shellId;
@@ -29,10 +30,28 @@ export class TerminalView {
       fontFamily: 'Consolas, "Courier New", monospace',
       windowsMode: true,
       convertEol: true,
+      rightClickSelectsWord: true,
+    });
+
+    // Auto-copy on selection
+    this.terminal.onSelectionChange(() => {
+      if (this.terminal.hasSelection()) {
+        const selection = this.terminal.getSelection();
+        if (selection) {
+          navigator.clipboard.writeText(selection).catch(() => {});
+        }
+      }
+    });
+
+    // Right-click paste with bracketed paste mode
+    this.element.addEventListener('contextmenu', async (e) => {
+      e.preventDefault();
+      const text = await navigator.clipboard.readText();
+      // Use bracketed paste mode if terminal supports it
+      this.onDataCallback('\x1b[200~' + text + '\x1b[201~');
     });
 
     // Hide xterm.js selection highlight via CSS
-    // Selection functionality still works but no visible highlight
     const style = document.createElement('style');
     style.textContent = `
       #terminal-${shellId} .xterm-selection {
@@ -67,6 +86,7 @@ export class TerminalView {
   }
 
   onData(callback: (data: string) => void): void {
+    this.onDataCallback = callback;
     this.terminal.onData(callback);
   }
 
