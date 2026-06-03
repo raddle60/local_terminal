@@ -15,6 +15,8 @@ export class TerminalView {
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
+      windowsMode: true,
+      convertEol: true,
     });
     this.fitAddon = new FitAddon();
     this.terminal.loadAddon(this.fitAddon);

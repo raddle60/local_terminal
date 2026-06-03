@@ -35,6 +35,7 @@ export class PtyManager {
     const shell = pty.spawn(config.shell, config.args, {
       cwd: expandEnvVars(config.cwd),
       env: process.env as { [key: string]: string },
+      windowsHide: true,
     });
 
     const instance: ShellInstance = {
