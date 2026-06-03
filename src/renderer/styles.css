@@ -216,10 +216,12 @@ body {
   left: 0;
   right: 0;
   top: 0;
+  pointer-events: none; /* Disable mouse events for all terminals */
 }
 
 .terminal-instance.active {
   z-index: 1;
+  pointer-events: auto; /* Only active terminal receives mouse events */
 }
 
 /* Terminal wrapper - matches VSCode structure */

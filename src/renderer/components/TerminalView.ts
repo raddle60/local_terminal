@@ -5,30 +5,33 @@ import '@xterm/xterm/css/xterm.css';
 export class TerminalView {
   private terminal: Terminal;
   private fitAddon: FitAddon;
-  private wrapperElement: HTMLElement;
+  private element: HTMLElement;
   private xtermHostElement: HTMLElement;
   private shellId: string;
   private onDataCallback: (data: string) => void = () => {};
-  private parentContainerId: string;
 
   constructor(parentContainerId: string, shellId: string) {
     this.shellId = shellId;
-    this.parentContainerId = parentContainerId;
 
-    // Create wrapper element (like VSCode's .terminal-wrapper)
-    this.wrapperElement = document.createElement('div');
-    this.wrapperElement.className = 'terminal-wrapper';
-    this.wrapperElement.style.width = '100%';
-    this.wrapperElement.style.height = '100%';
+    // Create terminal instance container
+    this.element = document.createElement('div');
+    this.element.className = 'terminal-instance';
+    this.element.style.width = '100%';
+    this.element.style.height = '100%';
+    this.element.style.position = 'absolute';
+    this.element.style.top = '0';
+    this.element.style.left = '0';
+    this.element.style.bottom = '0';
+    this.element.style.right = '0';
 
-    // Create xterm-host element (like VSCode's .terminal-xterm-host)
+    // Create xterm-host element
     this.xtermHostElement = document.createElement('div');
     this.xtermHostElement.className = 'terminal-xterm-host';
-    this.wrapperElement.appendChild(this.xtermHostElement);
+    this.element.appendChild(this.xtermHostElement);
 
-    // Add wrapper to parent
+    // Add to parent
     const parent = document.getElementById(parentContainerId)!;
-    parent.appendChild(this.wrapperElement);
+    parent.appendChild(this.element);
 
     // Create terminal - use minimal options to let shell handle selection natively
     this.terminal = new Terminal({
@@ -63,7 +66,7 @@ export class TerminalView {
   }
 
   getElement(): HTMLElement {
-    return this.wrapperElement;
+    return this.element;
   }
 
   getXtermHostElement(): HTMLElement {
@@ -96,11 +99,11 @@ export class TerminalView {
   }
 
   setActive(active: boolean): void {
-    this.wrapperElement.classList.toggle('active', active);
+    this.element.classList.toggle('active', active);
   }
 
   dispose(): void {
     this.terminal.dispose();
-    this.wrapperElement.remove();
+    this.element.remove();
   }
 }
