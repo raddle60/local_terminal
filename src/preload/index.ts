@@ -25,6 +25,9 @@ export interface ShellAPI {
   onShellOutputEnd: (callback: (shellId: string) => void) => void;
   loadProfiles: () => Promise<ProfileConfig[]>;
   saveProfiles: (profiles: ProfileConfig[]) => Promise<void>;
+  createProfile: (profile: ProfileConfig, parentId?: string) => Promise<boolean>;
+  updateProfile: (profile: ProfileConfig) => Promise<boolean>;
+  deleteProfile: (id: string) => Promise<boolean>;
 }
 
 const shellAPI: ShellAPI = {
@@ -46,6 +49,9 @@ const shellAPI: ShellAPI = {
   },
   loadProfiles: () => ipcRenderer.invoke('profile:load'),
   saveProfiles: (profiles) => ipcRenderer.invoke('profile:save', profiles),
+  createProfile: (profile, parentId) => ipcRenderer.invoke('profile:create', profile, parentId),
+  updateProfile: (profile) => ipcRenderer.invoke('profile:update', profile),
+  deleteProfile: (id) => ipcRenderer.invoke('profile:delete', id),
 };
 
 contextBridge.exposeInMainWorld('shellAPI', shellAPI);

@@ -88,6 +88,64 @@ function getDefaultProfiles(): ProfileConfig[] {
   ];
 }
 
+function findProfileById(profiles: ProfileConfig[], id: string): ProfileConfig | null {
+  for (const profile of profiles) {
+    if (profile.id === id) {
+      return profile;
+    }
+    if (profile.children) {
+      const found = findProfileById(profile.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function updateProfile(profiles: ProfileConfig[], updatedProfile: ProfileConfig): boolean {
+  for (let i = 0; i < profiles.length; i++) {
+    if (profiles[i].id === updatedProfile.id) {
+      profiles[i] = updatedProfile;
+      return true;
+    }
+    if (profiles[i].children) {
+      if (updateProfile(profiles[i].children!, updatedProfile)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function deleteProfile(profiles: ProfileConfig[], id: string): boolean {
+  for (let i = 0; i < profiles.length; i++) {
+    if (profiles[i].id === id) {
+      profiles.splice(i, 1);
+      return true;
+    }
+    if (profiles[i].children) {
+      if (deleteProfile(profiles[i].children!, id)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function addProfile(profiles: ProfileConfig[], newProfile: ProfileConfig, parentId?: string): boolean {
+  if (!parentId) {
+    // Add to root level
+    profiles.push(newProfile);
+    return true;
+  }
+  const parent = findProfileById(profiles, parentId);
+  if (parent && parent.type === 'folder') {
+    if (!parent.children) parent.children = [];
+    parent.children.push(newProfile);
+    return true;
+  }
+  return false;
+}
+
 export function setupIpcHandlers(): void {
   ipcMain.handle('profile:load', () => {
     return loadProfiles();
@@ -95,6 +153,33 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle('profile:save', (_event, profiles: ProfileConfig[]) => {
     saveProfiles(profiles);
+  });
+
+  ipcMain.handle('profile:create', (_event, newProfile: ProfileConfig, parentId?: string) => {
+    const profiles = loadProfiles();
+    if (addProfile(profiles, newProfile, parentId)) {
+      saveProfiles(profiles);
+      return true;
+    }
+    return false;
+  });
+
+  ipcMain.handle('profile:update', (_event, updatedProfile: ProfileConfig) => {
+    const profiles = loadProfiles();
+    if (updateProfile(profiles, updatedProfile)) {
+      saveProfiles(profiles);
+      return true;
+    }
+    return false;
+  });
+
+  ipcMain.handle('profile:delete', (_event, id: string) => {
+    const profiles = loadProfiles();
+    if (deleteProfile(profiles, id)) {
+      saveProfiles(profiles);
+      return true;
+    }
+    return false;
   });
 
   ipcMain.handle('shell:create', (_event, profileId: string, config: ProfileConfig['config']) => {

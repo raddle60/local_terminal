@@ -29,6 +29,9 @@ declare global {
       onShellOutputEnd: (callback: (shellId: string) => void) => void;
       loadProfiles: () => Promise<ProfileNode[]>;
       saveProfiles: (profiles: ProfileNode[]) => Promise<void>;
+      createProfile: (profile: ProfileNode, parentId?: string) => Promise<boolean>;
+      updateProfile: (profile: ProfileNode) => Promise<boolean>;
+      deleteProfile: (id: string) => Promise<boolean>;
     };
   }
 }
@@ -49,6 +52,14 @@ class App {
     this.profileTree.onProfileDoubleClick(async (node) => {
       if (node.type === 'profile' && node.config) {
         await this.createShell(node);
+      }
+    });
+
+    this.profileTree.onContextMenu((node, action) => {
+      if (action === 'edit') {
+        this.showEditProfileDialog(node);
+      } else if (action === 'delete') {
+        this.handleProfileDelete(node);
       }
     });
 
@@ -97,29 +108,103 @@ class App {
     const addProfileBtn = document.getElementById('add-profile-btn');
     if (addProfileBtn) {
       addProfileBtn.addEventListener('click', () => {
-        this.addNewProfile();
+        this.showAddProfileDialog();
       });
+    }
+
+    // Dialog event handlers
+    const dialog = document.getElementById('profile-dialog')!;
+    const dialogClose = document.getElementById('dialog-close')!;
+    const dialogCancel = document.getElementById('dialog-cancel')!;
+    const dialogSave = document.getElementById('dialog-save')!;
+
+    dialogClose.addEventListener('click', () => this.hideDialog());
+    dialogCancel.addEventListener('click', () => this.hideDialog());
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) this.hideDialog();
+    });
+
+    dialogSave.addEventListener('click', () => this.saveProfileDialog());
+  }
+
+  private dialogMode: 'add' | 'edit' = 'add';
+  private editingProfile: ProfileNode | null = null;
+
+  private showAddProfileDialog(): void {
+    this.dialogMode = 'add';
+    this.editingProfile = null;
+    document.getElementById('dialog-title')!.textContent = '新增 Profile';
+    (document.getElementById('profile-name') as HTMLInputElement).value = '';
+    (document.getElementById('profile-shell') as HTMLInputElement).value = 'powershell.exe';
+    (document.getElementById('profile-cwd') as HTMLInputElement).value = process.env.USERPROFILE || 'C:\\';
+    document.getElementById('profile-dialog')!.classList.remove('hidden');
+  }
+
+  private showEditProfileDialog(node: ProfileNode): void {
+    this.dialogMode = 'edit';
+    this.editingProfile = node;
+    document.getElementById('dialog-title')!.textContent = '编辑 Profile';
+    (document.getElementById('profile-name') as HTMLInputElement).value = node.name;
+    (document.getElementById('profile-shell') as HTMLInputElement).value = node.config?.shell || '';
+    (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
+    document.getElementById('profile-dialog')!.classList.remove('hidden');
+  }
+
+  private hideDialog(): void {
+    document.getElementById('profile-dialog')!.classList.add('hidden');
+    this.editingProfile = null;
+  }
+
+  private async saveProfileDialog(): Promise<void> {
+    const name = (document.getElementById('profile-name') as HTMLInputElement).value.trim();
+    const shell = (document.getElementById('profile-shell') as HTMLInputElement).value.trim();
+    const cwd = (document.getElementById('profile-cwd') as HTMLInputElement).value.trim();
+
+    if (!name || !shell || !cwd) {
+      return;
+    }
+
+    if (this.dialogMode === 'add') {
+      const newProfile: ProfileNode = {
+        id: `profile-${Date.now()}`,
+        name,
+        type: 'profile',
+        icon: null,
+        config: {
+          shell,
+          args: [],
+          cwd,
+          autoScripts: [],
+        },
+      };
+      await window.shellAPI.createProfile(newProfile);
+    } else if (this.editingProfile) {
+      const updatedProfile: ProfileNode = {
+        ...this.editingProfile,
+        name,
+        config: {
+          ...this.editingProfile.config!,
+          shell,
+          cwd,
+        },
+      };
+      await window.shellAPI.updateProfile(updatedProfile);
+    }
+
+    this.hideDialog();
+    await this.reloadProfiles();
+  }
+
+  private async handleProfileDelete(node: ProfileNode): Promise<void> {
+    if (confirm(`确定要删除 Profile "${node.name}" 吗？`)) {
+      await window.shellAPI.deleteProfile(node.id);
+      await this.reloadProfiles();
     }
   }
 
-  private addNewProfile(): void {
-    const newProfile = {
-      id: `profile-${Date.now()}`,
-      name: 'New Profile',
-      type: 'profile' as const,
-      icon: null,
-      config: {
-        shell: 'powershell.exe',
-        args: [],
-        cwd: process.env.USERPROFILE || 'C:\\Users\\' + (process.env.USERNAME || 'User'),
-        autoScripts: [],
-      },
-    };
-
-    // Add to first folder found, or create a folder
-    const profiles = window.shellAPI.loadProfiles ? [] : [];
-    // For now, just reload profiles - the new profile won't persist until saved
-    console.log('Add new profile:', newProfile);
+  private async reloadProfiles(): Promise<void> {
+    const profiles = await window.shellAPI.loadProfiles();
+    this.profileTree.setProfiles(profiles);
   }
 
   private async createShell(node: ProfileNode): Promise<void> {

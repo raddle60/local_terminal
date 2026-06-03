@@ -13,11 +13,13 @@ interface ProfileNode {
 }
 
 type TreeListener = (node: ProfileNode) => void;
+type ContextMenuListener = (node: ProfileNode, action: 'edit' | 'delete') => void;
 
 export class ProfileTree {
   private container: HTMLElement;
   private profiles: ProfileNode[] = [];
   private listeners: TreeListener[] = [];
+  private contextMenuListeners: ContextMenuListener[] = [];
   private expandedFolders: Set<string> = new Set();
 
   constructor(containerId: string) {
@@ -33,6 +35,10 @@ export class ProfileTree {
 
   onProfileDoubleClick(listener: TreeListener): void {
     this.listeners.push(listener);
+  }
+
+  onContextMenu(listener: ContextMenuListener): void {
+    this.contextMenuListeners.push(listener);
   }
 
   private render(): void {
@@ -93,6 +99,11 @@ export class ProfileTree {
           this.listeners.forEach(l => l(node));
         });
 
+        profileContent.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          this.showContextMenu(e.clientX, e.clientY, node);
+        });
+
         li.appendChild(profileContent);
       }
 
@@ -109,6 +120,53 @@ export class ProfileTree {
       icon.textContent = '📂';
     }
     this.render();
+  }
+
+  private contextMenu: HTMLElement | null = null;
+
+  private showContextMenu(x: number, y: number, node: ProfileNode): void {
+    this.hideContextMenu();
+
+    this.contextMenu = document.createElement('div');
+    this.contextMenu.className = 'context-menu';
+
+    const editItem = document.createElement('div');
+    editItem.className = 'context-menu-item';
+    editItem.textContent = '编辑';
+    editItem.addEventListener('click', () => {
+      this.contextMenuListeners.forEach(l => l(node, 'edit'));
+      this.hideContextMenu();
+    });
+
+    const deleteItem = document.createElement('div');
+    deleteItem.className = 'context-menu-item danger';
+    deleteItem.textContent = '删除';
+    deleteItem.addEventListener('click', () => {
+      this.contextMenuListeners.forEach(l => l(node, 'delete'));
+      this.hideContextMenu();
+    });
+
+    this.contextMenu.appendChild(editItem);
+    this.contextMenu.appendChild(deleteItem);
+    this.contextMenu.style.left = `${x}px`;
+    this.contextMenu.style.top = `${y}px`;
+    document.body.appendChild(this.contextMenu);
+
+    // Close on click outside
+    const closeHandler = () => {
+      this.hideContextMenu();
+      document.removeEventListener('click', closeHandler);
+    };
+    setTimeout(() => {
+      document.addEventListener('click', closeHandler);
+    }, 0);
+  }
+
+  private hideContextMenu(): void {
+    if (this.contextMenu) {
+      this.contextMenu.remove();
+      this.contextMenu = null;
+    }
   }
 
   private getShellIcon(shell?: string): string {
