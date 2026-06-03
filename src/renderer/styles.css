@@ -255,6 +255,15 @@ body {
   visibility: hidden;
 }
 
+/* Override xterm DOM renderer selection to be semi-transparent */
+.terminal-instance .xterm-dom-renderer-owner-1 .xterm-selection {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.terminal-instance .xterm-dom-renderer-owner-1 .xterm-selection div {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
 /* Terminal wrapper - matches VSCode structure */
 .terminal-wrapper {
   width: 100%;
