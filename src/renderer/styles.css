@@ -209,8 +209,8 @@ body {
   position: relative;
 }
 
-/* Terminal wrapper (VSCode pattern) */
-.terminal-wrapper {
+/* Terminal instance wrapper */
+.terminal-instance {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -218,8 +218,14 @@ body {
   top: 0;
 }
 
-.terminal-wrapper.active {
+.terminal-instance.active {
   z-index: 1;
+}
+
+/* Terminal wrapper - matches VSCode structure */
+.terminal-wrapper {
+  width: 100%;
+  height: 100%;
 }
 
 /* Xterm host */
@@ -228,21 +234,13 @@ body {
   height: 100%;
 }
 
-/* Xterm positioning (VSCode pattern) */
+/* Let xterm manage its own sizing within the container */
 .terminal-container .xterm {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  top: 0;
+  height: 100%;
 }
 
 .terminal-container .xterm-viewport {
-  z-index: 30;
-}
-
-.terminal-container .xterm-screen {
-  z-index: 31;
+  overflow-y: auto;
 }
 
 /* Context Menu */

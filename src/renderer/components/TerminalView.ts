@@ -30,22 +30,12 @@ export class TerminalView {
     const parent = document.getElementById(parentContainerId)!;
     parent.appendChild(this.wrapperElement);
 
-    // Create terminal with VSCode-like options
+    // Create terminal - use minimal options to let shell handle selection natively
     this.terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
-      windowsMode: true,
       convertEol: true,
-      rightClickSelectsWord: true,
-    });
-
-    // Immediately clear any selection made by xterm - let shell handle selection
-    this.terminal.onSelectionChange(() => {
-      // Small delay to let xterm process the selection first
-      setTimeout(() => {
-        this.terminal.clearSelection();
-      }, 0);
     });
 
     this.fitAddon = new FitAddon();
