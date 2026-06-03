@@ -41,6 +41,7 @@ class App {
   private tabBar!: TabBar;
   private terminals: Map<string, TerminalView> = new Map();
   private tabCounter = 0;
+  private resizeTimeout: number | null = null;
 
   async init(): Promise<void> {
     this.profileTree = new ProfileTree('profile-tree');
@@ -101,13 +102,20 @@ class App {
     });
 
     window.addEventListener('resize', () => {
-      const activeTabId = this.tabBar.getActiveTabId();
-      if (activeTabId) {
-        const terminal = this.terminals.get(activeTabId);
-        if (terminal) {
-          terminal.fit();
-        }
+      // Debounce resize to prevent fit() from being called too frequently
+      if (this.resizeTimeout !== null) {
+        clearTimeout(this.resizeTimeout);
       }
+      this.resizeTimeout = window.setTimeout(() => {
+        this.resizeTimeout = null;
+        const activeTabId = this.tabBar.getActiveTabId();
+        if (activeTabId) {
+          const terminal = this.terminals.get(activeTabId);
+          if (terminal) {
+            terminal.fit();
+          }
+        }
+      }, 100);
     });
 
     // Add profile button handler
