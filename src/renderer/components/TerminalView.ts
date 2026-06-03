@@ -105,7 +105,14 @@ export class TerminalView {
   }
 
   fit(): void {
+    // Save scroll position before fit
+    const viewportElement = this.element.querySelector('.xterm-viewport') as HTMLElement;
+    const scrollTop = viewportElement ? viewportElement.scrollTop : 0;
     this.fitAddon.fit();
+    // Restore scroll position after fit
+    if (viewportElement) {
+      viewportElement.scrollTop = scrollTop;
+    }
   }
 
   setActive(active: boolean): void {
