@@ -38,6 +38,7 @@ export class TerminalView {
       fontSize: 14,
       fontFamily: 'Consolas, "Courier New", monospace',
       convertEol: true,
+      scrollOnUserInput: false,
     });
 
     this.fitAddon = new FitAddon();
