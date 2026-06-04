@@ -12,6 +12,7 @@ function createWindow() {
     backgroundColor: '#1e1e1e',
     autoHideMenuBar: true,
     frame: false,
+    icon: path.join(__dirname, '../renderer/terminal.ico'),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,

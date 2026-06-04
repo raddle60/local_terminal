@@ -31,6 +31,20 @@ body {
   font-size: 12px;
 }
 
+.title-bar-left {
+  display: flex;
+  align-items: center;
+  -webkit-app-region: drag;
+}
+
+.title-bar-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: 12px;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
 .title-bar-controls {
   display: flex;
   -webkit-app-region: no-drag;
