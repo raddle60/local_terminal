@@ -402,6 +402,9 @@ class App {
       isDisconnected: false,
     });
 
+    // Set new tab as active (this also clears previous active tab)
+    this.tabBar.setActiveTab(tabId);
+
     const terminalView = new TerminalView('terminal-container', tabId);
     terminalView.onData((data) => {
       window.shellAPI.writeToShell(tabId, data);
