@@ -40,6 +40,7 @@ export class TerminalView {
       theme: {
         background: '#2d2d2d',
       },
+      scrollback: 10000,
     });
 
     this.fitAddon = new FitAddon();
@@ -48,6 +49,15 @@ export class TerminalView {
     // Open terminal in xterm-host element
     this.terminal.open(this.xtermHostElement);
     this.fitAddon.fit();
+
+    // Fix IME composition view positioning in TUI apps
+    // Issue: When in alternate screen buffer (Claude Code), xterm's
+    // composition-view position calculation becomes incorrect.
+    // Solution: Manually reposition composition view to match the
+    // xterm-cursor's actual rendered position before IME shows.
+    setTimeout(() => {
+      this.setupImePositionFix();
+    }, 0);
 
     // Auto-copy on selection change
     this.terminal.onSelectionChange(() => {
@@ -111,6 +121,135 @@ export class TerminalView {
 
   setActive(active: boolean): void {
     this.element.classList.toggle('active', active);
+  }
+
+  private setupImePositionFix(): void {
+    // The bug: xterm's IME composition view positioning uses internal
+    // coordinates that are incorrect in TUI apps (like Claude Code)
+    // that use alternate screen buffer and custom cursor rendering.
+    //
+    // Fix: Find the actual rendered cursor (a span with xterm-bg class
+    // in the .xterm-rows) and align the composition view to it.
+    // Also reposition the helper textarea (which OS uses to position
+    // the IME candidate window) to follow the real cursor.
+    const helperTextarea = this.xtermHostElement.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+    if (!helperTextarea) return;
+
+    const reposition = () => {
+      const compositionView = this.xtermHostElement.querySelector('.composition-view') as HTMLElement;
+      const hostRect = this.xtermHostElement.getBoundingClientRect();
+      const cursorEl = this.findActualCursor();
+
+      if (!cursorEl) return;
+      const rect = cursorEl.getBoundingClientRect();
+      const left = rect.left - hostRect.left;
+      const top = rect.top - hostRect.top;
+      const height = rect.height || 17;
+
+      // Position composition view (the rendered composing text)
+      if (compositionView && compositionView.classList.contains('active')) {
+        compositionView.style.position = 'absolute';
+        compositionView.style.left = `${left}px`;
+        compositionView.style.top = `${top}px`;
+        compositionView.style.right = 'auto';
+        compositionView.style.bottom = 'auto';
+      }
+
+      // Position helper textarea (this is what OS uses to place IME
+      // candidate window). xterm sets it to position:absolute with
+      // left: -9999em. We override with the actual cursor position.
+      // Use !important via setProperty to override xterm's inline styles.
+      if (compositionView?.classList.contains('active') || document.activeElement === helperTextarea) {
+        helperTextarea.style.setProperty('position', 'absolute', 'important');
+        helperTextarea.style.setProperty('left', `${left}px`, 'important');
+        helperTextarea.style.setProperty('top', `${top}px`, 'important');
+        helperTextarea.style.setProperty('height', `${height}px`, 'important');
+        helperTextarea.style.setProperty('opacity', '0', 'important');
+      }
+    };
+
+    // Continuously reposition during composition, since xterm resets
+    // the helper textarea position on every render. We use a rAF loop
+    // that runs only while IME is active.
+    let rafId: number | null = null;
+    const loop = () => {
+      const compositionView = this.xtermHostElement.querySelector('.composition-view') as HTMLElement;
+      if (compositionView?.classList.contains('active')) {
+        reposition();
+        rafId = requestAnimationFrame(loop);
+      } else {
+        rafId = null;
+      }
+    };
+
+    // Watch DOM changes
+    const screen = this.xtermHostElement.querySelector('.xterm-screen');
+    if (screen) {
+      const observer = new MutationObserver(() => {
+        const compositionView = this.xtermHostElement.querySelector('.composition-view') as HTMLElement;
+        if (compositionView?.classList.contains('active')) {
+          reposition();
+          // Start the continuous loop if not already running
+          if (rafId === null) {
+            rafId = requestAnimationFrame(loop);
+          }
+        }
+      });
+      observer.observe(screen, {
+        attributes: true,
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributeFilter: ['style', 'class']
+      });
+    }
+
+    // Also reposition on keydown (Backspace, characters) - this catches
+    // the case where shell hasn't echoed back yet but cursor moved
+    helperTextarea.addEventListener('keydown', () => {
+      requestAnimationFrame(reposition);
+    });
+    helperTextarea.addEventListener('compositionstart', () => {
+      requestAnimationFrame(() => requestAnimationFrame(reposition));
+      // Start continuous repositioning loop
+      if (rafId === null) {
+        rafId = requestAnimationFrame(loop);
+      }
+    });
+    helperTextarea.addEventListener('compositionend', () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    });
+  }
+
+  private findActualCursor(): HTMLElement | null {
+    // The cursor in xterm is rendered as a span with class xterm-bg-7
+    // and xterm-fg-0. In TUI apps (Claude Code), xterm's internal
+    // cursor state becomes wrong, so we look at the actual DOM to
+    // find the cursor. We pick the lowest one in the visible area,
+    // and on the same row, the rightmost one (where new text will be).
+    const cursorSpans = Array.from(this.xtermHostElement.querySelectorAll('span.xterm-bg-7.xterm-fg-0'));
+    if (cursorSpans.length === 0) return null;
+
+    const hostRect = this.xtermHostElement.getBoundingClientRect();
+    let best: HTMLElement | null = null;
+    let bestTop = -Infinity;
+    let bestLeft = -Infinity;
+
+    for (const span of cursorSpans) {
+      const rect = span.getBoundingClientRect();
+      if (rect.top < hostRect.top - 5 || rect.top >= hostRect.bottom) continue;
+      if (rect.top > bestTop + 5 ||
+          (Math.abs(rect.top - bestTop) <= 5 && rect.left > bestLeft)) {
+        best = span as HTMLElement;
+        bestTop = rect.top;
+        bestLeft = rect.left;
+      }
+    }
+
+    return best;
   }
 
   getDimensions(): { cols: number; rows: number } {
