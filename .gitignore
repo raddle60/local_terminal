@@ -28,3 +28,4 @@ out/
 .env
 .env.local
 .env.*.local
+/release

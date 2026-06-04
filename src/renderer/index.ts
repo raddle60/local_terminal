@@ -165,9 +165,6 @@ class App {
 
     dialogClose.addEventListener('click', () => this.hideDialog());
     dialogCancel.addEventListener('click', () => this.hideDialog());
-    dialog.addEventListener('click', (e) => {
-      if (e.target === dialog) this.hideDialog();
-    });
 
     dialogSave.addEventListener('click', () => this.saveProfileDialog());
 
@@ -182,9 +179,6 @@ class App {
 
     confirmCancel.addEventListener('click', () => this.hideConfirmDialog(false));
     confirmOk.addEventListener('click', () => this.hideConfirmDialog(true));
-    confirmDialog.addEventListener('click', (e) => {
-      if (e.target === confirmDialog) this.hideConfirmDialog(false);
-    });
   }
 
   private confirmResolve: ((result: boolean) => void) | null = null;
