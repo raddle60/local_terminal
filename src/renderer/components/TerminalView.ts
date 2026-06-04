@@ -72,14 +72,69 @@ export class TerminalView {
     // Right-click paste with bracketed paste mode
     this.xtermHostElement.addEventListener('contextmenu', async (e) => {
       e.preventDefault();
-      try {
-        const text = await navigator.clipboard.readText();
-        // Bracketed paste mode
-        this.onDataCallback('\x1b[200~' + text.replace(/\x1b\[200~/g, '') + '\x1b[201~');
-      } catch (err) {
-        // Fallback: read clipboard via prompt if clipboard API fails
-      }
+      await this.pasteFromClipboard();
     });
+
+    // Ctrl+V / Cmd+V paste with bracketed paste mode.
+    // Use xterm's official `attachCustomKeyEventHandler` so xterm
+    // itself skips Ctrl+V entirely (returning false makes xterm
+    // emit no data for the key). Our own handler then writes the
+    // bracketed paste via onData. This avoids the double-paste
+    // that happens when we only intercept the DOM event, because
+    // xterm's internal key evaluation also runs and would otherwise
+    // emit the paste a second time.
+    this.terminal.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+      if (e.type !== 'keydown') return true;
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === 'v') {
+        e.preventDefault();
+        this.pasteFromClipboard();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  private async pasteFromClipboard(): Promise<void> {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) return;
+
+      // Bracketed paste mode - filter out any existing paste markers
+      const cleanText = text.replace(/\x1b\[200~/g, '');
+      const PASTE_START = '\x1b[200~';
+      const PASTE_END = '\x1b[201~';
+
+      // Large pastes are split into small chunks with a delay between
+      // them so the TUI (e.g. Claude Code) can consume the data
+      // incrementally. Without this, a ~2K paste is truncated to
+      // roughly half: the TUI's paste handler / line buffer fills
+      // up before it can process the leading characters, and only
+      // the tail is rendered.
+      const CHUNK_SIZE = 64;
+      const CHUNK_DELAY_MS = 25;
+      if (cleanText.length <= CHUNK_SIZE) {
+        this.onDataCallback(PASTE_START + cleanText + PASTE_END);
+        return;
+      }
+
+      // Begin bracketed paste with the first chunk
+      this.onDataCallback(PASTE_START + cleanText.slice(0, CHUNK_SIZE));
+
+      let offset = CHUNK_SIZE;
+      const flushChunk = () => {
+        if (offset >= cleanText.length) {
+          this.onDataCallback(PASTE_END);
+          return;
+        }
+        const end = Math.min(offset + CHUNK_SIZE, cleanText.length);
+        this.onDataCallback(cleanText.slice(offset, end));
+        offset = end;
+        setTimeout(flushChunk, CHUNK_DELAY_MS);
+      };
+      setTimeout(flushChunk, CHUNK_DELAY_MS);
+    } catch (err) {
+      // Clipboard API failed (e.g., no permission); silently ignore
+    }
   }
 
   getShellId(): string {
