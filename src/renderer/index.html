@@ -46,19 +46,31 @@
       <div class="dialog-content">
         <div class="form-group">
           <label class="form-label">名称</label>
-          <input type="text" id="profile-name" class="form-input">
+          <div class="field-row">
+            <input type="text" id="profile-name" class="form-input">
+            <span id="profile-name-status" class="field-status"></span>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">图标</label>
-          <input type="text" id="profile-icon" class="form-input" placeholder="图标文件路径">
+          <div class="field-row">
+            <input type="text" id="profile-icon" class="form-input" placeholder="图标文件路径(可选)">
+            <span id="profile-icon-status" class="field-status"></span>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Shell 程序</label>
-          <input type="text" id="profile-shell" class="form-input">
+          <div class="field-row">
+            <input type="text" id="profile-shell" class="form-input">
+            <span id="profile-shell-status" class="field-status"></span>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">启动目录</label>
-          <input type="text" id="profile-cwd" class="form-input">
+          <div class="field-row">
+            <input type="text" id="profile-cwd" class="form-input">
+            <span id="profile-cwd-status" class="field-status"></span>
+          </div>
         </div>
         <div class="form-group">
           <div class="form-label-row">

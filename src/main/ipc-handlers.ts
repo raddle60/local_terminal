@@ -44,8 +44,115 @@ function saveProfiles(profiles: ProfileConfig[]): void {
 function getDefaultProfiles(): ProfileConfig[] {
   const homeDir = os.homedir();
   return [
-    
+
   ];
+}
+
+// --- Validation helpers (used by validate:profileConfig IPC) ---
+
+type FieldStatus = 'ok' | 'missing' | 'not-executable' | 'not-found';
+
+interface ValidationResult {
+  name: 'ok' | 'missing';
+  icon: FieldStatus | null;   // null = not provided
+  shell: FieldStatus;
+  cwd: FieldStatus | null;    // null = not provided (will be treated as error by UI)
+}
+
+function checkFile(p: string): FieldStatus {
+  try {
+    const stat = fs.statSync(p);
+    return stat.isFile() ? 'ok' : 'missing';
+  } catch {
+    return 'missing';
+  }
+}
+
+function checkDir(p: string): FieldStatus {
+  try {
+    const stat = fs.statSync(p);
+    return stat.isDirectory() ? 'ok' : 'missing';
+  } catch {
+    return 'missing';
+  }
+}
+
+/**
+ * Check whether `command` is invocable on the current platform.
+ * - If it looks like an absolute path (has separator or drive letter),
+ *   verify the file exists and is executable.
+ * - Otherwise, look it up in PATH, with PATHEXT-aware fallback on Windows.
+ */
+function checkShell(command: string): FieldStatus {
+  if (!command) return 'missing';
+
+  const stripped = command.replace(/^["']|["']$/g, '').trim();
+  const isAbsolute = path.isAbsolute(stripped) || /[\\/]/.test(stripped);
+
+  if (isAbsolute) {
+    const status = checkFile(stripped);
+    if (status !== 'ok') return 'missing';
+    // On POSIX, also verify the executable bit
+    if (process.platform !== 'win32') {
+      try {
+        const stat = fs.statSync(stripped);
+        if ((stat.mode & 0o111) === 0) return 'not-executable';
+      } catch {
+        return 'missing';
+      }
+    }
+    return 'ok';
+  }
+
+  const pathEnv = process.env.PATH || process.env.Path || '';
+  const dirs = pathEnv.split(path.delimiter).filter(Boolean);
+
+  if (process.platform === 'win32') {
+    const pathext = (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD;.VBS;.JS;.WSF;.MSC')
+      .split(';')
+      .map(e => e.toLowerCase())
+      .filter(Boolean);
+    // Also try the bare name in case a file without extension is on PATH
+    const candidates = ['', ...pathext];
+
+    for (const dir of dirs) {
+      for (const ext of candidates) {
+        const candidate = path.join(dir, stripped + ext);
+        if (checkFile(candidate) === 'ok') return 'ok';
+      }
+    }
+    return 'not-found';
+  } else {
+    for (const dir of dirs) {
+      const candidate = path.join(dir, stripped);
+      try {
+        const stat = fs.statSync(candidate);
+        if (stat.isFile() && (stat.mode & 0o111) !== 0) return 'ok';
+      } catch {
+        // continue
+      }
+    }
+    return 'not-found';
+  }
+}
+
+function validateProfileConfig(input: {
+  name?: string;
+  icon?: string | null;
+  shell?: string;
+  cwd?: string;
+}): ValidationResult {
+  const nameInput = (input.name ?? '').toString().trim();
+  const iconInput = (input.icon ?? '').toString().trim();
+  const shellInput = (input.shell ?? '').toString().trim();
+  const cwdInput = (input.cwd ?? '').toString().trim();
+
+  return {
+    name: nameInput ? 'ok' : 'missing',
+    icon: iconInput ? checkFile(iconInput) : null,
+    shell: shellInput ? checkShell(shellInput) : 'missing',
+    cwd: cwdInput ? checkDir(cwdInput) : null,
+  };
 }
 
 function findProfileById(profiles: ProfileConfig[], id: string): ProfileConfig | null {
@@ -161,6 +268,13 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('app:getHomeDir', () => {
     return process.env.USERPROFILE || process.env.HOME || 'C:\\';
   });
+
+  ipcMain.handle(
+    'validate:profileConfig',
+    (_event, input: { name?: string; icon?: string | null; shell?: string; cwd?: string }) => {
+      return validateProfileConfig(input);
+    }
+  );
 
   ipcMain.on('window:minimize', () => {
     const win = BrowserWindow.getFocusedWindow();

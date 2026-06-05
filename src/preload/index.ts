@@ -30,6 +30,12 @@ export interface ShellAPI {
   updateProfile: (profile: ProfileConfig) => Promise<boolean>;
   deleteProfile: (id: string) => Promise<boolean>;
   getHomeDir: () => Promise<string>;
+  validateProfileConfig: (input: { name?: string; icon?: string | null; shell?: string; cwd?: string }) => Promise<{
+    name: 'ok' | 'missing';
+    icon: 'ok' | 'missing' | 'not-executable' | 'not-found' | null;
+    shell: 'ok' | 'missing' | 'not-executable' | 'not-found';
+    cwd: 'ok' | 'missing' | 'not-executable' | 'not-found' | null;
+  }>;
   minimizeWindow: () => void;
   maximizeWindow: () => void;
   closeWindow: () => void;
@@ -61,6 +67,7 @@ const shellAPI: ShellAPI = {
   updateProfile: (profile) => ipcRenderer.invoke('profile:update', profile),
   deleteProfile: (id) => ipcRenderer.invoke('profile:delete', id),
   getHomeDir: () => ipcRenderer.invoke('app:getHomeDir'),
+  validateProfileConfig: (input) => ipcRenderer.invoke('validate:profileConfig', input),
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   maximizeWindow: () => ipcRenderer.send('window:maximize'),
   closeWindow: () => ipcRenderer.send('window:close'),

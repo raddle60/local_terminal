@@ -34,6 +34,12 @@ declare global {
       updateProfile: (profile: ProfileNode) => Promise<boolean>;
       deleteProfile: (id: string) => Promise<boolean>;
       getHomeDir: () => Promise<string>;
+      validateProfileConfig: (input: { name?: string; icon?: string | null; shell?: string; cwd?: string }) => Promise<{
+        name: 'ok' | 'missing';
+        icon: 'ok' | 'missing' | 'not-executable' | 'not-found' | null;
+        shell: 'ok' | 'missing' | 'not-executable' | 'not-found';
+        cwd: 'ok' | 'missing' | 'not-executable' | 'not-found' | null;
+      }>;
       minimizeWindow: () => void;
       maximizeWindow: () => void;
       closeWindow: () => void;
@@ -41,12 +47,22 @@ declare global {
   }
 }
 
+type FieldStatus = 'ok' | 'missing' | 'not-executable' | 'not-found' | null;
+type ValidationResult = {
+  name: 'ok' | 'missing';
+  icon: FieldStatus;
+  shell: 'ok' | 'missing' | 'not-executable' | 'not-found';
+  cwd: FieldStatus;
+};
+
 class App {
   private profileTree!: ProfileTree;
   private tabBar!: TabBar;
   private terminals: Map<string, TerminalView> = new Map();
   private tabCounter = 0;
   private resizeTimeout: number | null = null;
+  private validationTimeout: number | null = null;
+  private lastValidation: ValidationResult = { name: 'missing', icon: null, shell: 'missing', cwd: null };
 
   async init(): Promise<void> {
     this.profileTree = new ProfileTree('profile-tree');
@@ -168,6 +184,16 @@ class App {
 
     dialogSave.addEventListener('click', () => this.saveProfileDialog());
 
+    // Live validation for name/icon/shell/cwd fields
+    const nameInput = document.getElementById('profile-name') as HTMLInputElement;
+    const iconInput = document.getElementById('profile-icon') as HTMLInputElement;
+    const shellInput = document.getElementById('profile-shell') as HTMLInputElement;
+    const cwdInput = document.getElementById('profile-cwd') as HTMLInputElement;
+    nameInput.addEventListener('input', () => this.scheduleValidation());
+    iconInput.addEventListener('input', () => this.scheduleValidation());
+    shellInput.addEventListener('input', () => this.scheduleValidation());
+    cwdInput.addEventListener('input', () => this.scheduleValidation());
+
     // Auto-scripts event handler
     const addScriptBtn = document.getElementById('add-script-btn')!;
     addScriptBtn.addEventListener('click', () => this.addAutoScript());
@@ -214,6 +240,7 @@ class App {
     (document.getElementById('profile-cwd') as HTMLInputElement).value = homeDir;
     this.renderAutoScripts([]);
     document.getElementById('profile-dialog')!.classList.remove('hidden');
+    this.scheduleValidation();
   }
 
   private showEditProfileDialog(node: ProfileNode): void {
@@ -226,6 +253,7 @@ class App {
     (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
     this.renderAutoScripts(node.config?.autoScripts || []);
     document.getElementById('profile-dialog')!.classList.remove('hidden');
+    this.scheduleValidation();
   }
 
   private showCopyProfileDialog(node: ProfileNode): void {
@@ -238,11 +266,86 @@ class App {
     (document.getElementById('profile-cwd') as HTMLInputElement).value = node.config?.cwd || '';
     this.renderAutoScripts(node.config?.autoScripts || []);
     document.getElementById('profile-dialog')!.classList.remove('hidden');
+    this.scheduleValidation();
   }
 
   private hideDialog(): void {
     document.getElementById('profile-dialog')!.classList.add('hidden');
     this.editingProfile = null;
+  }
+
+  private scheduleValidation(): void {
+    // Show "checking" state immediately for snappy UI feedback
+    this.setFieldStatus('profile-name-status', 'checking');
+    this.setFieldStatus('profile-icon-status', 'checking');
+    this.setFieldStatus('profile-shell-status', 'checking');
+    this.setFieldStatus('profile-cwd-status', 'checking');
+    this.setSaveEnabled(false);
+
+    if (this.validationTimeout !== null) {
+      clearTimeout(this.validationTimeout);
+    }
+    this.validationTimeout = window.setTimeout(() => {
+      this.validationTimeout = null;
+      void this.runValidation();
+    }, 250);
+  }
+
+  private async runValidation(): Promise<void> {
+    const name = (document.getElementById('profile-name') as HTMLInputElement).value;
+    const icon = (document.getElementById('profile-icon') as HTMLInputElement).value;
+    const shell = (document.getElementById('profile-shell') as HTMLInputElement).value;
+    const cwd = (document.getElementById('profile-cwd') as HTMLInputElement).value;
+
+    const result = await window.shellAPI.validateProfileConfig({ name, icon, shell, cwd });
+    this.lastValidation = result;
+    this.renderValidationStatus(result);
+    this.setSaveEnabled(this.isValid(result));
+  }
+
+  private renderValidationStatus(result: ValidationResult): void {
+    this.setFieldStatus('profile-name-status', result.name === 'ok' ? 'ok' : 'error');
+    this.setFieldStatus('profile-icon-status', result.icon === 'ok' ? 'ok' : (result.icon === null ? null : 'error'));
+    this.setFieldStatus('profile-shell-status', result.shell === 'ok' ? 'ok' : 'error');
+    this.setFieldStatus('profile-cwd-status', result.cwd === 'ok' ? 'ok' : (result.cwd === null ? 'error' : 'error'));
+  }
+
+  private setFieldStatus(elementId: string, status: 'ok' | 'error' | 'checking' | null): void {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    el.className = 'field-status';
+    if (status) el.classList.add(status);
+    el.title = this.statusTitle(elementId, status);
+  }
+
+  private statusTitle(elementId: string, status: 'ok' | 'error' | 'checking' | null): string {
+    const labels: Record<string, string> = {
+      'profile-name-status': '名称',
+      'profile-icon-status': '图标',
+      'profile-shell-status': 'Shell 程序',
+      'profile-cwd-status': '启动目录',
+    };
+    const label = labels[elementId] ?? '';
+    if (status === 'ok') return `${label}：校验通过`;
+    if (status === 'error') return `${label}：${label === '名称' ? '不能为空' : '文件不存在或路径错误'}`;
+    if (status === 'checking') return `${label}：校验中…`;
+    return '';
+  }
+
+  private isValid(result: ValidationResult): boolean {
+    if (result.name !== 'ok') return false;
+    // icon is optional; if provided it must exist
+    if (result.icon !== null && result.icon !== 'ok') return false;
+    // shell is required
+    if (result.shell !== 'ok') return false;
+    // cwd is required
+    if (result.cwd !== 'ok') return false;
+    return true;
+  }
+
+  private setSaveEnabled(enabled: boolean): void {
+    const btn = document.getElementById('dialog-save') as HTMLButtonElement | null;
+    if (btn) btn.disabled = !enabled;
   }
 
   private renderAutoScripts(scripts: Array<{ command: string; waitFor: string | null }>): void {
@@ -332,8 +435,10 @@ class App {
     const shell = (document.getElementById('profile-shell') as HTMLInputElement).value.trim();
     const cwd = (document.getElementById('profile-cwd') as HTMLInputElement).value.trim();
 
-    if (!name || !shell || !cwd) {
-      return;
+    if (!this.isValid(this.lastValidation)) {
+      // Re-run validation in case the user clicked save before debounce fired
+      await this.runValidation();
+      if (!this.isValid(this.lastValidation)) return;
     }
 
     const autoScripts = this.getAutoScriptsFromUI();

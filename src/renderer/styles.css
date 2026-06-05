@@ -494,6 +494,51 @@ body {
   border-color: #0078d4;
 }
 
+.field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-row .form-input {
+  flex: 1;
+}
+
+.field-status {
+  flex-shrink: 0;
+  min-width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.field-status.ok {
+  color: #3fb950;
+}
+
+.field-status.ok::before {
+  content: '✓';
+}
+
+.field-status.error {
+  color: #f85149;
+}
+
+.field-status.error::before {
+  content: '✗';
+}
+
+.field-status.checking {
+  color: #8b949e;
+}
+
+.field-status.checking::before {
+  content: '…';
+}
+
 /* Buttons */
 .btn {
   padding: 8px 16px;
@@ -510,6 +555,17 @@ body {
 
 .btn-primary:hover {
   background: #106ebe;
+}
+
+.btn-primary:disabled,
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary:disabled:hover,
+.btn:disabled:hover {
+  background: #0078d4;
 }
 
 .btn-secondary {
