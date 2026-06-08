@@ -518,6 +518,13 @@ class App {
 
     this.terminals.set(tabId, terminalView);
 
+    // Auto-focus the new shell so the user can start typing right
+    // after the double-click. requestAnimationFrame defers the focus
+    // call until the dblclick event has fully finished and the new
+    // terminal is in the DOM focus order, mirroring the pattern used
+    // after the paste dialog closes.
+    requestAnimationFrame(() => terminalView.focus());
+
     // Resize after a short delay to ensure container is rendered
     setTimeout(() => {
       terminalView.fit();

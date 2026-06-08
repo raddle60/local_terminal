@@ -101,40 +101,148 @@ export class TerminalView {
 
       // Bracketed paste mode - filter out any existing paste markers
       const cleanText = text.replace(/\x1b\[200~/g, '');
-      const PASTE_START = '\x1b[200~';
-      const PASTE_END = '\x1b[201~';
+      if (!cleanText) return;
 
-      // Large pastes are split into small chunks with a delay between
-      // them so the TUI (e.g. Claude Code) can consume the data
-      // incrementally. Without this, a ~2K paste is truncated to
-      // roughly half: the TUI's paste handler / line buffer fills
-      // up before it can process the leading characters, and only
-      // the tail is rendered.
-      const CHUNK_SIZE = 64;
-      const CHUNK_DELAY_MS = 25;
-      if (cleanText.length <= CHUNK_SIZE) {
-        this.onDataCallback(PASTE_START + cleanText + PASTE_END);
+      // Multi-line text: ask the user how to paste. Single-line pastes
+      // are always bracketed — there's no auto-execute risk, and the
+      // dialog would be needless friction.
+      if (/[\r\n]/.test(cleanText)) {
+        const choice = await this.showPasteDialog(cleanText);
+        if (choice === 'cancel') return;
+        if (choice === 'bracketed') {
+          this.writeBracketed(cleanText);
+        } else {
+          this.writePlain(cleanText);
+        }
         return;
       }
 
-      // Begin bracketed paste with the first chunk
-      this.onDataCallback(PASTE_START + cleanText.slice(0, CHUNK_SIZE));
-
-      let offset = CHUNK_SIZE;
-      const flushChunk = () => {
-        if (offset >= cleanText.length) {
-          this.onDataCallback(PASTE_END);
-          return;
-        }
-        const end = Math.min(offset + CHUNK_SIZE, cleanText.length);
-        this.onDataCallback(cleanText.slice(offset, end));
-        offset = end;
-        setTimeout(flushChunk, CHUNK_DELAY_MS);
-      };
-      setTimeout(flushChunk, CHUNK_DELAY_MS);
+      this.writeBracketed(cleanText);
     } catch (err) {
       // Clipboard API failed (e.g., no permission); silently ignore
+    } finally {
+      // The paste dialog (or even the clipboard read) can steal focus
+      // from the terminal. Restore it so the user can keep typing in
+      // the shell after the paste starts streaming. rAF is used to
+      // defer until the click event has fully finished and the dialog
+      // is no longer in the DOM focus order.
+      requestAnimationFrame(() => this.terminal.focus());
     }
+  }
+
+  private pasteDialogOpen = false;
+
+  private showPasteDialog(text: string): Promise<'bracketed' | 'plain' | 'cancel'> {
+    // If a paste dialog is already showing, ignore the new paste
+    // request rather than stacking dialogs over each other.
+    if (this.pasteDialogOpen) {
+      return Promise.resolve('cancel');
+    }
+    this.pasteDialogOpen = true;
+
+    return new Promise((resolve) => {
+      const dialog = document.getElementById('paste-dialog')!;
+      const preview = document.getElementById('paste-preview')!;
+      const bracketedBtn = document.getElementById('paste-bracketed')!;
+      const plainBtn = document.getElementById('paste-plain')!;
+      const cancelBtn = document.getElementById('paste-cancel')!;
+
+      // Show a trimmed preview so the user knows what they're pasting
+      // without overflowing the dialog.
+      const MAX_PREVIEW = 500;
+      preview.textContent =
+        text.length > MAX_PREVIEW
+          ? text.slice(0, MAX_PREVIEW) + '\n…(已截断)'
+          : text;
+
+      const finish = (choice: 'bracketed' | 'plain' | 'cancel') => {
+        bracketedBtn.removeEventListener('click', onBracketed);
+        plainBtn.removeEventListener('click', onPlain);
+        cancelBtn.removeEventListener('click', onCancel);
+        dialog.classList.add('hidden');
+        this.pasteDialogOpen = false;
+        resolve(choice);
+      };
+
+      const onBracketed = () => finish('bracketed');
+      const onPlain = () => finish('plain');
+      const onCancel = () => finish('cancel');
+
+      bracketedBtn.addEventListener('click', onBracketed);
+      plainBtn.addEventListener('click', onPlain);
+      cancelBtn.addEventListener('click', onCancel);
+
+      dialog.classList.remove('hidden');
+    });
+  }
+
+  // Large pastes are split into small chunks with a delay between
+  // them so the TUI (e.g. Claude Code) can consume the data
+  // incrementally. Without this, a ~2K paste is truncated to
+  // roughly half: the TUI's paste handler / line buffer fills
+  // up before it can process the leading characters, and only
+  // the tail is rendered.
+  private writeBracketed(text: string): void {
+    const CHUNK_SIZE = 64;
+    const CHUNK_DELAY_MS = 25;
+    const PASTE_START = '\x1b[200~';
+    const PASTE_END = '\x1b[201~';
+
+    if (text.length <= CHUNK_SIZE) {
+      this.onDataCallback(PASTE_START + text + PASTE_END);
+      return;
+    }
+
+    // Begin bracketed paste with the first chunk
+    this.onDataCallback(PASTE_START + text.slice(0, CHUNK_SIZE));
+
+    let offset = CHUNK_SIZE;
+    const flushChunk = () => {
+      if (offset >= text.length) {
+        this.onDataCallback(PASTE_END);
+        return;
+      }
+      const end = Math.min(offset + CHUNK_SIZE, text.length);
+      this.onDataCallback(text.slice(offset, end));
+      offset = end;
+      setTimeout(flushChunk, CHUNK_DELAY_MS);
+    };
+    setTimeout(flushChunk, CHUNK_DELAY_MS);
+  }
+
+  // Plain (non-bracketed) paste: write text as if typed. The TUI/shell
+  // sees raw characters with no paste markers, so each line is treated
+  // as a separate command and submitted.
+  //
+  // Line endings are normalized to CR (\r) before sending. Reason:
+  // Windows ConPTY does not translate LF→CR on input — only CR
+  // triggers Enter, so a raw LF leaves the shell prompt waiting.
+  // On Unix the terminal driver converts CR→LF via ICRNL, so the
+  // same encoding works for both platforms.
+  //
+  // Same chunking strategy as bracketed to avoid TUI input buffer
+  // overflow on large pastes.
+  private writePlain(text: string): void {
+    const CHUNK_SIZE = 64;
+    const CHUNK_DELAY_MS = 25;
+    const normalized = text.replace(/\r\n|\n|\r/g, '\r');
+
+    if (normalized.length <= CHUNK_SIZE) {
+      this.onDataCallback(normalized);
+      return;
+    }
+
+    this.onDataCallback(normalized.slice(0, CHUNK_SIZE));
+
+    let offset = CHUNK_SIZE;
+    const flushChunk = () => {
+      if (offset >= normalized.length) return;
+      const end = Math.min(offset + CHUNK_SIZE, normalized.length);
+      this.onDataCallback(normalized.slice(offset, end));
+      offset = end;
+      setTimeout(flushChunk, CHUNK_DELAY_MS);
+    };
+    setTimeout(flushChunk, CHUNK_DELAY_MS);
   }
 
   getShellId(): string {
