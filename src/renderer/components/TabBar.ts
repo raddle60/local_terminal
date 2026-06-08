@@ -15,6 +15,7 @@ export class TabBar {
   private activeTabId: string | null = null;
   private onTabClickListeners: TabListener[] = [];
   private onTabCloseListeners: TabListener[] = [];
+  private onTabActivateListeners: TabListener[] = [];
 
   constructor(containerId: string) {
     const container = document.getElementById(containerId);
@@ -28,9 +29,12 @@ export class TabBar {
   }
 
   removeTab(tabId: string): void {
+    const closingActive = this.activeTabId === tabId;
     this.tabs = this.tabs.filter(t => t.id !== tabId);
-    if (this.activeTabId === tabId) {
+    if (closingActive) {
       this.activeTabId = this.tabs.length > 0 ? this.tabs[0].id : null;
+      this.tabs.forEach(t => t.isActive = t.id === this.activeTabId);
+      this.onTabActivateListeners.forEach(l => l(this.activeTabId!));
     }
     this.render();
   }
@@ -67,6 +71,10 @@ export class TabBar {
 
   onClose(listener: TabListener): void {
     this.onTabCloseListeners.push(listener);
+  }
+
+  onActivate(listener: TabListener): void {
+    this.onTabActivateListeners.push(listener);
   }
 
   private render(): void {

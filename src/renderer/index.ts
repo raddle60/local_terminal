@@ -105,6 +105,15 @@ class App {
       this.closeTab(tabId);
     });
 
+    this.tabBar.onActivate((tabId) => {
+      // Auto-focus the newly activated tab's terminal, mirroring the
+      // focus-after-create pattern used in createShell.
+      const terminal = this.terminals.get(tabId);
+      if (terminal) {
+        requestAnimationFrame(() => terminal.focus());
+      }
+    });
+
     window.shellAPI.onShellData((shellId, data) => {
       const terminal = this.terminals.get(shellId);
       if (terminal) {
