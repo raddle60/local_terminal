@@ -50,6 +50,37 @@ export class TerminalView {
     this.terminal.open(this.xtermHostElement);
     this.fitAddon.fit();
 
+    // Fix cursor-position desync after window-focus change.
+    // When focus returns to the window, xterm's internal cursor state can
+    // diverge from the TUI app's rendered cursor (e.g. claude code).
+    // Sending ← then → with a 50ms gap forces the shell to emit fresh
+    // cursor-movement sequences that resync xterm's idea of the column.
+    // Note: xterm.js 5.5's public API only exposes focus()/blur() methods,
+    // not events, so we listen on the underlying textarea DOM element.
+    let wasFocused = true;
+    const textarea = this.xtermHostElement.querySelector('textarea') as HTMLTextAreaElement | null;
+    if (textarea) {
+      // Dispatch keyboard events on the textarea to simulate arrow-key presses.
+      // xterm's internal input handler listens to these DOM keyboard events and
+      // converts them to ANSI escape sequences (\x1b[D / \x1b[C) which are then
+      // sent to the PTY.  The shell echoes them back, and xterm uses the
+      // returned cursor-movement sequences to resync its internal cursor state.
+      const sendKey = (key: string, keyCode: number) => {
+        textarea.dispatchEvent(new KeyboardEvent('keydown', { key, keyCode, bubbles: true }));
+        textarea.dispatchEvent(new KeyboardEvent('keyup', { key, keyCode, bubbles: true }));
+      };
+      textarea.addEventListener('focus', () => {
+        if (!wasFocused) {
+          setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
+          setTimeout(() => sendKey('ArrowRight', 39), 50);  // →
+        }
+        wasFocused = true;
+      });
+      textarea.addEventListener('blur', () => {
+        wasFocused = false;
+      });
+    }
+
     // Fix IME composition view positioning in TUI apps
     // Issue: When in alternate screen buffer (Claude Code), xterm's
     // composition-view position calculation becomes incorrect.
