@@ -69,15 +69,23 @@ export class TerminalView {
         textarea.dispatchEvent(new KeyboardEvent('keydown', { key, keyCode, bubbles: true }));
         textarea.dispatchEvent(new KeyboardEvent('keyup', { key, keyCode, bubbles: true }));
       };
+      const resyncCursor = () => {
+        setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
+        setTimeout(() => sendKey('ArrowRight', 39), 50);  // →
+      };
       textarea.addEventListener('focus', () => {
-        if (!wasFocused) {
-          setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
-          setTimeout(() => sendKey('ArrowRight', 39), 50);  // →
-        }
+        if (!wasFocused) resyncCursor();
         wasFocused = true;
       });
       textarea.addEventListener('blur', () => {
         wasFocused = false;
+      });
+      // Before IME commits the composed text, resync the cursor so it arrives at
+      // the correct position inside the TUI app.  compositionstart fires before
+      // any text is sent to the PTY — the actual commit (compositionend) happens
+      // later after the user confirms with Space/Enter.
+      textarea.addEventListener('compositionstart', () => {
+        resyncCursor();
       });
     }
 
