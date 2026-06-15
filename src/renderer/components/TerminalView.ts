@@ -71,7 +71,7 @@ export class TerminalView {
       };
       const resyncCursor = () => {
         setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
-        setTimeout(() => sendKey('ArrowRight', 39), 50);  // →
+        setTimeout(() => sendKey('ArrowRight', 39), 10);  // →
       };
       textarea.addEventListener('focus', () => {
         if (!wasFocused) resyncCursor();
