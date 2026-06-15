@@ -80,13 +80,6 @@ export class TerminalView {
       textarea.addEventListener('blur', () => {
         wasFocused = false;
       });
-      // Before IME commits the composed text, resync the cursor so it arrives at
-      // the correct position inside the TUI app.  compositionstart fires before
-      // any text is sent to the PTY — the actual commit (compositionend) happens
-      // later after the user confirms with Space/Enter.
-      textarea.addEventListener('compositionstart', () => {
-        resyncCursor();
-      });
     }
 
     // Fix IME composition view positioning in TUI apps
