@@ -14,12 +14,14 @@ interface ProfileNode {
 
 type TreeListener = (node: ProfileNode) => void;
 type ContextMenuListener = (node: ProfileNode, action: 'edit' | 'delete' | 'copy') => void;
+type FolderContextMenuListener = (node: ProfileNode, action: 'add-profile' | 'add-folder' | 'delete') => void;
 
 export class ProfileTree {
   private container: HTMLElement;
   private profiles: ProfileNode[] = [];
   private listeners: TreeListener[] = [];
   private contextMenuListeners: ContextMenuListener[] = [];
+  private folderContextMenuListeners: FolderContextMenuListener[] = [];
   private expandedFolders: Set<string> = new Set();
 
   constructor(containerId: string) {
@@ -39,6 +41,10 @@ export class ProfileTree {
 
   onContextMenu(listener: ContextMenuListener): void {
     this.contextMenuListeners.push(listener);
+  }
+
+  onFolderContextMenu(listener: FolderContextMenuListener): void {
+    this.folderContextMenuListeners.push(listener);
   }
 
   private render(): void {
@@ -69,6 +75,11 @@ export class ProfileTree {
 
         folderHeader.addEventListener('click', () => {
           this.toggleFolder(node.id, icon);
+        });
+
+        folderHeader.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          this.showFolderContextMenu(e.clientX, e.clientY, node);
         });
 
         li.appendChild(folderHeader);
@@ -133,6 +144,7 @@ export class ProfileTree {
   }
 
   private contextMenu: HTMLElement | null = null;
+  private folderContextMenu: HTMLElement | null = null;
 
   private showContextMenu(x: number, y: number, node: ProfileNode): void {
     this.hideContextMenu();
@@ -186,6 +198,60 @@ export class ProfileTree {
       this.contextMenu.remove();
       this.contextMenu = null;
     }
+    if (this.folderContextMenu) {
+      this.folderContextMenu.remove();
+      this.folderContextMenu = null;
+    }
+  }
+
+  private showFolderContextMenu(x: number, y: number, node: ProfileNode): void {
+    this.hideContextMenu();
+
+    this.folderContextMenu = document.createElement('div');
+    this.folderContextMenu.className = 'context-menu';
+
+    const addProfileItem = document.createElement('div');
+    addProfileItem.className = 'context-menu-item';
+    addProfileItem.textContent = '新增 Profile';
+    addProfileItem.addEventListener('click', () => {
+      this.folderContextMenuListeners.forEach(l => l(node, 'add-profile'));
+      this.hideContextMenu();
+    });
+
+    const addFolderItem = document.createElement('div');
+    addFolderItem.className = 'context-menu-item';
+    addFolderItem.textContent = '新增子文件夹';
+    addFolderItem.addEventListener('click', () => {
+      this.folderContextMenuListeners.forEach(l => l(node, 'add-folder'));
+      this.hideContextMenu();
+    });
+
+    const separator = document.createElement('div');
+    separator.className = 'context-menu-separator';
+
+    const deleteItem = document.createElement('div');
+    deleteItem.className = 'context-menu-item danger';
+    deleteItem.textContent = '删除文件夹';
+    deleteItem.addEventListener('click', () => {
+      this.folderContextMenuListeners.forEach(l => l(node, 'delete'));
+      this.hideContextMenu();
+    });
+
+    this.folderContextMenu.appendChild(addProfileItem);
+    this.folderContextMenu.appendChild(addFolderItem);
+    this.folderContextMenu.appendChild(separator);
+    this.folderContextMenu.appendChild(deleteItem);
+    this.folderContextMenu.style.left = `${x}px`;
+    this.folderContextMenu.style.top = `${y}px`;
+    document.body.appendChild(this.folderContextMenu);
+
+    const closeHandler = () => {
+      this.hideContextMenu();
+      document.removeEventListener('click', closeHandler);
+    };
+    setTimeout(() => {
+      document.addEventListener('click', closeHandler);
+    }, 0);
   }
 
   private getShellIcon(shell?: string): string {

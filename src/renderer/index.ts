@@ -87,6 +87,16 @@ class App {
       }
     });
 
+    this.profileTree.onFolderContextMenu((node, action) => {
+      if (action === 'add-profile') {
+        void this.showAddProfileDialog(node.id, node.name);
+      } else if (action === 'add-folder') {
+        void this.showAddFolderDialog(node.id, node.name);
+      } else if (action === 'delete') {
+        void this.handleFolderDelete(node);
+      }
+    });
+
     this.tabBar.onClick((tabId) => {
       // Clear selection on all terminals and set active state
       this.terminals.forEach((t, id) => {
@@ -162,8 +172,8 @@ class App {
     // Add profile button handler
     const addProfileBtn = document.getElementById('add-profile-btn');
     if (addProfileBtn) {
-      addProfileBtn.addEventListener('click', async () => {
-        await this.showAddProfileDialog();
+      addProfileBtn.addEventListener('click', async (e) => {
+        this.showAddButtonPopup(e);
       });
     }
 
@@ -214,6 +224,31 @@ class App {
 
     confirmCancel.addEventListener('click', () => this.hideConfirmDialog(false));
     confirmOk.addEventListener('click', () => this.hideConfirmDialog(true));
+
+    // Folder name dialog event handlers
+    const folderNameCancel = document.getElementById('folder-name-cancel')!;
+    const folderNameOk = document.getElementById('folder-name-ok')!;
+    const folderNameInput = document.getElementById('folder-name-input') as HTMLInputElement;
+
+    folderNameCancel.addEventListener('click', () => this.hideFolderDialog(null));
+    folderNameOk.addEventListener('click', () => {
+      const name = folderNameInput.value.trim();
+      if (!name) {
+        document.getElementById('folder-name-error')!.textContent = 'Folder name cannot be empty';
+        return;
+      }
+      void this.saveFolder(name);
+    });
+    folderNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const name = folderNameInput.value.trim();
+        if (!name) {
+          document.getElementById('folder-name-error')!.textContent = 'Folder name cannot be empty';
+          return;
+        }
+        void this.saveFolder(name);
+      }
+    });
   }
 
   private confirmResolve: ((result: boolean) => void) | null = null;
@@ -235,13 +270,115 @@ class App {
     }
   }
 
+  private popupMenu: HTMLElement | null = null;
+
+  private showAddButtonPopup(e: MouseEvent): void {
+    this.hidePopupMenu();
+
+    this.popupMenu = document.createElement('div');
+    this.popupMenu.className = 'context-menu';
+
+    const addProfileItem = document.createElement('div');
+    addProfileItem.className = 'context-menu-item';
+    addProfileItem.textContent = '新增 Profile';
+    addProfileItem.addEventListener('click', () => {
+      void this.showAddProfileDialog();
+      this.hidePopupMenu();
+    });
+
+    const addFolderItem = document.createElement('div');
+    addFolderItem.className = 'context-menu-item';
+    addFolderItem.textContent = '新增文件夹';
+    addFolderItem.addEventListener('click', () => {
+      void this.showAddFolderDialog();
+      this.hidePopupMenu();
+    });
+
+    this.popupMenu.appendChild(addProfileItem);
+    this.popupMenu.appendChild(addFolderItem);
+
+    const btn = e.target as HTMLElement;
+    const rect = btn.getBoundingClientRect();
+    this.popupMenu.style.left = `${rect.left}px`;
+    this.popupMenu.style.top = `${rect.bottom + 4}px`;
+    document.body.appendChild(this.popupMenu);
+
+    const closeHandler = () => {
+      this.hidePopupMenu();
+      document.removeEventListener('click', closeHandler);
+    };
+    setTimeout(() => {
+      document.addEventListener('click', closeHandler);
+    }, 0);
+  }
+
+  private hidePopupMenu(): void {
+    if (this.popupMenu) {
+      this.popupMenu.remove();
+      this.popupMenu = null;
+    }
+  }
+
+  private folderDialogResolve: ((name: string | null) => void) | null = null;
+
+  private showAddFolderDialog(parentId?: string, parentName?: string): void {
+    this.parentFolderId = parentId;
+    const dialog = document.getElementById('folder-name-dialog')!;
+    const titleEl = document.getElementById('folder-dialog-title')!;
+    if (parentName) {
+      titleEl.textContent = `新增子文件夹 - ${parentName}`;
+    } else {
+      titleEl.textContent = '新增文件夹';
+    }
+    (document.getElementById('folder-name-input') as HTMLInputElement).value = '';
+    document.getElementById('folder-name-error')!.textContent = '';
+    dialog.classList.remove('hidden');
+    (document.getElementById('folder-name-input') as HTMLInputElement).focus();
+  }
+
+  private hideFolderDialog(name: string | null): void {
+    document.getElementById('folder-name-dialog')!.classList.add('hidden');
+    if (this.folderDialogResolve) {
+      this.folderDialogResolve(name);
+      this.folderDialogResolve = null;
+    }
+  }
+
+  private async handleFolderDelete(node: ProfileNode): Promise<void> {
+    const confirmed = await this.showConfirmDialog('确认', `确定要删除文件夹 "${node.name}" 吗？`);
+    if (confirmed) {
+      await window.shellAPI.deleteProfile(node.id);
+      await this.reloadProfiles();
+    }
+  }
+
+  private async saveFolder(name: string): Promise<void> {
+    const newFolder: ProfileNode = {
+      id: `folder-${Date.now()}`,
+      name,
+      type: 'folder',
+      children: [],
+    };
+    await window.shellAPI.createProfile(newFolder, this.parentFolderId);
+    this.hideFolderDialog(null);
+    await this.reloadProfiles();
+  }
+
   private dialogMode: 'add' | 'edit' | 'copy' = 'add';
   private editingProfile: ProfileNode | null = null;
+  private parentFolderId: string | undefined = undefined;
 
-  private async showAddProfileDialog(): Promise<void> {
+  private async showAddProfileDialog(parentId?: string, parentName?: string): Promise<void> {
     this.dialogMode = 'add';
     this.editingProfile = null;
+    this.parentFolderId = parentId;
     document.getElementById('dialog-title')!.textContent = '新增 Profile';
+    const parentFolderEl = document.getElementById('dialog-parent-folder')!;
+    if (parentName) {
+      parentFolderEl.textContent = `位于: ${parentName}`;
+    } else {
+      parentFolderEl.textContent = '';
+    }
     (document.getElementById('profile-name') as HTMLInputElement).value = '';
     (document.getElementById('profile-icon') as HTMLInputElement).value = '';
     (document.getElementById('profile-shell') as HTMLInputElement).value = '';
@@ -281,6 +418,8 @@ class App {
   private hideDialog(): void {
     document.getElementById('profile-dialog')!.classList.add('hidden');
     this.editingProfile = null;
+    this.parentFolderId = undefined;
+    document.getElementById('dialog-parent-folder')!.textContent = '';
   }
 
   private scheduleValidation(): void {
@@ -465,7 +604,7 @@ class App {
           autoScripts,
         },
       };
-      await window.shellAPI.createProfile(newProfile);
+      await window.shellAPI.createProfile(newProfile, this.parentFolderId);
     } else if (this.editingProfile) {
       const updatedProfile: ProfileNode = {
         ...this.editingProfile,
