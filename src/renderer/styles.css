@@ -146,6 +146,27 @@ body {
   background: #2a2d2e;
 }
 
+.dragging {
+  opacity: 0.5;
+}
+
+.drop-above {
+  border-top: 2px solid #0078d4;
+}
+
+.drop-below {
+  border-bottom: 2px solid #0078d4;
+}
+
+.drop-inside {
+  background: rgba(0, 120, 212, 0.2);
+}
+
+.folder.drop-inside {
+  outline: 2px dashed #0078d4;
+  outline-offset: -2px;
+}
+
 .folder-icon {
   font-size: 14px;
 }

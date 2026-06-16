@@ -70,6 +70,8 @@ class App {
 
     const profiles = await window.shellAPI.loadProfiles();
     this.profileTree.setProfiles(profiles);
+    const expandedFolders = this.loadExpandedFolders();
+    this.profileTree.setExpandedFolders(expandedFolders, true);
 
     this.profileTree.onProfileDoubleClick(async (node) => {
       if (node.type === 'profile' && node.config) {
@@ -95,6 +97,14 @@ class App {
       } else if (action === 'delete') {
         void this.handleFolderDelete(node);
       }
+    });
+
+    this.profileTree.onMove((movedId, targetId, position) => {
+      void this.handleMove(movedId, targetId, position);
+    });
+
+    this.profileTree.onFolderToggle(() => {
+      this.saveExpandedFolders();
     });
 
     this.tabBar.onClick((tabId) => {
@@ -362,6 +372,106 @@ class App {
     await window.shellAPI.createProfile(newFolder, this.parentFolderId);
     this.hideFolderDialog(null);
     await this.reloadProfiles();
+  }
+
+  private async handleMove(movedId: string, targetId: string | null, position: 'before' | 'after' | 'inside'): Promise<void> {
+    const profiles = await window.shellAPI.loadProfiles();
+    const movedNode = this.findNodeById(profiles, movedId);
+    if (!movedNode) return;
+
+    // Check if target is inside moved (can't move folder into itself or descendants)
+    if (targetId && this.isNodeInside(targetId, movedNode)) {
+      return;
+    }
+
+    // Remove moved node from tree
+    this.removeNode(profiles, movedId);
+
+    if (targetId === null) {
+      // Move to root at end
+      profiles.push(movedNode);
+    } else {
+      const targetNode = this.findNodeById(profiles, targetId);
+      if (!targetNode) return;
+
+      if (position === 'inside') {
+        // Move inside target folder
+        if (!targetNode.children) targetNode.children = [];
+        targetNode.children.push(movedNode);
+        // Expand target folder so user can see the result
+        const expanded = this.profileTree.getExpandedFolders();
+        if (!expanded.includes(targetId)) {
+          this.profileTree.setExpandedFolders([...expanded, targetId]);
+          this.saveExpandedFolders();
+        }
+      } else {
+        // Insert before or after target
+        const parent = this.findParentNode(profiles, targetId);
+        let siblings: ProfileNode[];
+        if (parent) {
+          if (!parent.children) parent.children = [];
+          siblings = parent.children;
+        } else {
+          siblings = profiles;
+        }
+        const targetIndex = siblings.findIndex(n => n.id === targetId);
+        const insertIndex = position === 'before' ? targetIndex : targetIndex + 1;
+        siblings.splice(insertIndex, 0, movedNode);
+      }
+    }
+
+    await window.shellAPI.saveProfiles(profiles);
+
+    // Update UI - setProfiles will re-render with the modified tree
+    this.profileTree.setProfiles(profiles);
+  }
+
+  private findNodeById(nodes: ProfileNode[], id: string): ProfileNode | null {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = this.findNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
+  private findParentNode(nodes: ProfileNode[], childId: string): ProfileNode | null {
+    for (const node of nodes) {
+      if (node.children) {
+        for (const child of node.children) {
+          if (child.id === childId) return node;
+        }
+        const parent = this.findParentNode(node.children, childId);
+        if (parent) return parent;
+      }
+    }
+    return null;
+  }
+
+  // Check if nodeId is inside the movedNode (including nested children)
+  private isNodeInside(nodeId: string, movedNode: ProfileNode): boolean {
+    if (movedNode.id === nodeId) return true;
+    if (movedNode.children) {
+      for (const child of movedNode.children) {
+        if (this.isNodeInside(nodeId, child)) return true;
+      }
+    }
+    return false;
+  }
+
+  private removeNode(nodes: ProfileNode[], id: string): boolean {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === id) {
+        nodes.splice(i, 1);
+        return true;
+      }
+      if (nodes[i].children) {
+        if (this.removeNode(nodes[i].children!, id)) return true;
+      }
+    }
+    return false;
   }
 
   private dialogMode: 'add' | 'edit' | 'copy' = 'add';
@@ -635,6 +745,22 @@ class App {
   private async reloadProfiles(): Promise<void> {
     const profiles = await window.shellAPI.loadProfiles();
     this.profileTree.setProfiles(profiles);
+    const expandedFolders = this.loadExpandedFolders();
+    this.profileTree.setExpandedFolders(expandedFolders);
+  }
+
+  private loadExpandedFolders(): string[] {
+    try {
+      const saved = localStorage.getItem('expandedFolders');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private saveExpandedFolders(): void {
+    const expanded = this.profileTree.getExpandedFolders();
+    localStorage.setItem('expandedFolders', JSON.stringify(expanded));
   }
 
   private async createShell(node: ProfileNode): Promise<void> {

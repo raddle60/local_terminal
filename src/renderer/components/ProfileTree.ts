@@ -15,6 +15,8 @@ interface ProfileNode {
 type TreeListener = (node: ProfileNode) => void;
 type ContextMenuListener = (node: ProfileNode, action: 'edit' | 'delete' | 'copy') => void;
 type FolderContextMenuListener = (node: ProfileNode, action: 'add-profile' | 'add-folder' | 'delete') => void;
+type MoveListener = (movedId: string, targetId: string | null, position: 'before' | 'after' | 'inside') => void;
+type FolderToggleListener = (folderId: string, expanded: boolean) => void;
 
 export class ProfileTree {
   private container: HTMLElement;
@@ -22,7 +24,11 @@ export class ProfileTree {
   private listeners: TreeListener[] = [];
   private contextMenuListeners: ContextMenuListener[] = [];
   private folderContextMenuListeners: FolderContextMenuListener[] = [];
+  private moveListeners: MoveListener[] = [];
+  private folderToggleListeners: FolderToggleListener[] = [];
   private expandedFolders: Set<string> = new Set();
+  private dragSourceId: string | null = null;
+  private currentDragTargetId: string | null = null; // Track current drag target to prevent parent highlighting
 
   constructor(containerId: string) {
     const container = document.getElementById(containerId);
@@ -31,8 +37,22 @@ export class ProfileTree {
   }
 
   setProfiles(profiles: ProfileNode[]): void {
+    // Clear drag state when profiles change (e.g., after drop)
+    this.dragSourceId = null;
+    this.clearDropIndicators();
     this.profiles = profiles;
     this.render();
+  }
+
+  setExpandedFolders(expandedIds: string[], shouldRender = false): void {
+    this.expandedFolders = new Set(expandedIds);
+    if (shouldRender) {
+      this.render();
+    }
+  }
+
+  getExpandedFolders(): string[] {
+    return Array.from(this.expandedFolders);
   }
 
   onProfileDoubleClick(listener: TreeListener): void {
@@ -47,12 +67,35 @@ export class ProfileTree {
     this.folderContextMenuListeners.push(listener);
   }
 
+  onMove(listener: MoveListener): void {
+    this.moveListeners.push(listener);
+  }
+
+  onFolderToggle(listener: FolderToggleListener): void {
+    this.folderToggleListeners.push(listener);
+  }
+
   private render(): void {
     this.container.innerHTML = '';
     const ul = document.createElement('ul');
     ul.className = 'profile-tree';
+    this.addContainerDropListeners(ul);
     this.renderNodes(this.profiles, ul);
     this.container.appendChild(ul);
+  }
+
+  private addContainerDropListeners(ul: HTMLElement): void {
+    ul.addEventListener('dragover', (e) => {
+      if (!this.dragSourceId) return;
+      e.preventDefault();
+      e.dataTransfer!.dropEffect = 'move';
+    });
+
+    ul.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (!this.dragSourceId) return;
+      this.moveListeners.forEach(l => l(this.dragSourceId!, null, 'after'));
+    });
   }
 
   private renderNodes(nodes: ProfileNode[], parent: HTMLElement): void {
@@ -62,6 +105,9 @@ export class ProfileTree {
 
       if (node.type === 'folder') {
         li.className = 'folder';
+        li.draggable = true;
+        this.addDragListeners(li, node.id);
+
         const folderHeader = document.createElement('div');
         folderHeader.className = 'folder-header';
         const icon = document.createElement('span');
@@ -92,6 +138,9 @@ export class ProfileTree {
         }
       } else {
         li.className = 'profile';
+        li.draggable = true;
+        this.addDragListeners(li, node.id);
+
         const profileContent = document.createElement('div');
         profileContent.className = 'profile-content';
 
@@ -133,6 +182,7 @@ export class ProfileTree {
   }
 
   private toggleFolder(id: string, icon: HTMLElement): void {
+    const isExpanding = !this.expandedFolders.has(id);
     if (this.expandedFolders.has(id)) {
       this.expandedFolders.delete(id);
       icon.textContent = '📁';
@@ -140,7 +190,119 @@ export class ProfileTree {
       this.expandedFolders.add(id);
       icon.textContent = '📂';
     }
+    this.folderToggleListeners.forEach(l => l(id, isExpanding));
     this.render();
+  }
+
+  private addDragListeners(li: HTMLElement, nodeId: string): void {
+    li.addEventListener('dragstart', (e) => {
+      e.stopImmediatePropagation();
+      this.dragSourceId = nodeId;
+      this.currentDragTargetId = null;
+      li.classList.add('dragging');
+      e.dataTransfer!.effectAllowed = 'move';
+      e.dataTransfer!.setData('text/plain', nodeId);
+    });
+
+    li.addEventListener('dragend', () => {
+      this.dragSourceId = null;
+      this.currentDragTargetId = null;
+      li.classList.remove('dragging');
+      this.clearDropIndicators();
+    });
+
+    li.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      if (!this.dragSourceId || this.dragSourceId === nodeId) return;
+      // Set this as the current target if it's deeper than existing target
+      // We use dragenter to track the deepest element
+      if (!this.currentDragTargetId || this.isDescendant(this.currentDragTargetId, nodeId)) {
+        this.currentDragTargetId = nodeId;
+      }
+    });
+
+    li.addEventListener('dragleave', (e) => {
+      // Only process if leaving to outside our subtree
+      if (e.relatedTarget && li.contains(e.relatedTarget as Node)) return;
+      if (this.currentDragTargetId === nodeId) {
+        this.currentDragTargetId = null;
+      }
+    });
+
+    li.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!this.dragSourceId || this.dragSourceId === nodeId) return;
+      // Only show indicator for the deepest (current) target
+      if (this.currentDragTargetId !== nodeId) return;
+      e.dataTransfer!.dropEffect = 'move';
+
+      this.clearDropIndicators();
+
+      const rect = li.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const height = rect.height;
+
+      if (li.classList.contains('folder')) {
+        // For folders: top/bottom 25% = before/after, middle = inside
+        if (y < height * 0.25) {
+          li.classList.add('drop-above');
+        } else if (y > height * 0.75) {
+          li.classList.add('drop-below');
+        } else {
+          li.classList.add('drop-inside');
+        }
+      } else {
+        // For profiles: top half = before, bottom half = after
+        if (y < height * 0.5) {
+          li.classList.add('drop-above');
+        } else {
+          li.classList.add('drop-below');
+        }
+      }
+    });
+
+    li.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!this.dragSourceId || this.dragSourceId === nodeId) return;
+      // Only handle drop on the deepest target
+      if (this.currentDragTargetId !== nodeId) return;
+
+      const rect = li.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const height = rect.height;
+
+      let position: 'before' | 'after' | 'inside';
+      if (li.classList.contains('folder')) {
+        if (y < height * 0.25) {
+          position = 'before';
+        } else if (y > height * 0.75) {
+          position = 'after';
+        } else {
+          position = 'inside';
+        }
+      } else {
+        position = y < height * 0.5 ? 'before' : 'after';
+      }
+
+      this.clearDropIndicators();
+      this.currentDragTargetId = null;
+      this.moveListeners.forEach(l => l(this.dragSourceId!, nodeId, position));
+    });
+  }
+
+  // Check if potentialDescendant is inside ancestorId in the DOM tree
+  private isDescendant(ancestorId: string, potentialDescendantId: string): boolean {
+    const ancestor = this.container.querySelector(`[data-node-id="${ancestorId}"]`);
+    if (!ancestor) return false;
+    const descendant = ancestor.querySelector(`[data-node-id="${potentialDescendantId}"]`);
+    return descendant !== null;
+  }
+
+  private clearDropIndicators(): void {
+    this.container.querySelectorAll('.drop-above, .drop-below, .drop-inside').forEach(el => {
+      el.classList.remove('drop-above', 'drop-below', 'drop-inside');
+    });
   }
 
   private contextMenu: HTMLElement | null = null;
