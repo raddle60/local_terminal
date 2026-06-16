@@ -168,7 +168,18 @@ body {
 }
 
 .folder-icon {
-  font-size: 14px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cccccc;
+}
+
+.folder-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .folder-name {
