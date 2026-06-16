@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- PowerShell (Windows) -->
+  <rect width="64" height="64" rx="10" fill="#012456"/>
+  <!-- PS logo background glow -->
+  <ellipse cx="32" cy="28" rx="22" ry="16" fill="#003d8f" opacity="0.5"/>
+  <!-- PS text -->
+  <text x="8" y="38" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="white">PS</text>
+  <!-- Angle bracket decoration -->
+  <text x="6" y="55" font-family="monospace" font-size="10" fill="#5b9bd5" letter-spacing="0.5">powershell</text>
+  <!-- Right edge accent -->
+  <rect x="60" y="0" width="4" height="64" rx="2" fill="#5b9bd5"/>
+</svg>

@@ -157,7 +157,7 @@ export class ProfileTree {
           iconImg.style.height = '16px';
           iconSpan.appendChild(iconImg);
         } else {
-          iconSpan.textContent = this.getShellIcon(node.config?.shell);
+          iconSpan.innerHTML = this.getShellIcon(node.config?.shell);
         }
 
         const name = document.createElement('span');
@@ -421,10 +421,25 @@ export class ProfileTree {
   private getShellIcon(shell?: string): string {
     if (!shell) return '📦';
     const shellLower = shell.toLowerCase();
-    if (shellLower.includes('powershell')) return '⬜';
-    if (shellLower.includes('cmd')) return '📝';
-    if (shellLower.includes('bash')) return '🐚';
-    if (shellLower.includes('wsl') || shellLower.includes('ubuntu')) return '🐧';
-    return '📦';
+    const shellName = this.extractShellName(shell);
+    const iconPath = `./assets/shell-icons/${shellName}.svg`;
+    return `<img src="${iconPath}" alt="${shellName}" style="width:16px;height:16px;" onerror="this.parentElement.textContent='📦'">`;
+  }
+
+  private extractShellName(shell: string): string {
+    const shellLower = shell.toLowerCase();
+    if (shellLower.includes('bash')) return 'bash';
+    if (shellLower.includes('zsh')) return 'zsh';
+    if (shellLower.includes('fish')) return 'fish';
+    if (shellLower.includes('powershell') || shellLower.includes('pwsh')) return 'powershell';
+    if (shellLower.includes('cmd')) return 'cmd';
+    if (shellLower.includes('dash')) return 'dash';
+    if (shellLower.includes('ksh')) return 'ksh';
+    if (shellLower.includes('tcsh')) return 'tcsh';
+    if (shellLower.includes('xonsh')) return 'xonsh';
+    if (shellLower.includes('nushell') || shellLower.includes('nu')) return 'nushell';
+    if (shellLower.includes('wsl') || shellLower.includes('ubuntu')) return 'bash';
+    if (shellLower.includes('sh')) return 'sh';
+    return 'default';
   }
 }
