@@ -311,7 +311,24 @@ export class TerminalView {
   }
 
   fit(): void {
+    // Account for padding in the container when fitting
+    const style = getComputedStyle(this.element);
+    const paddingX = parseInt(style.paddingLeft, 10) + parseInt(style.paddingRight, 10);
+    const paddingY = parseInt(style.paddingTop, 10) + parseInt(style.paddingBottom, 10);
+    const availableWidth = this.element.clientWidth - paddingX;
+    const availableHeight = this.element.clientHeight - paddingY;
+
+    // Temporarily resize the element to account for padding
+    const originalWidth = this.element.style.width;
+    const originalHeight = this.element.style.height;
+    this.element.style.width = `${availableWidth}px`;
+    this.element.style.height = `${availableHeight}px`;
+
     this.fitAddon.fit();
+
+    // Restore original dimensions
+    this.element.style.width = originalWidth;
+    this.element.style.height = originalHeight;
   }
 
   setActive(active: boolean): void {
@@ -337,17 +354,22 @@ export class TerminalView {
 
       if (!cursorEl) return;
       const rect = cursorEl.getBoundingClientRect();
-      const left = rect.left - hostRect.left;
-      const top = rect.top - hostRect.top;
+      // xterm's internal content is offset by the host's padding,
+      // so we need to add it back to get correct composition view position
+      const style = getComputedStyle(this.xtermHostElement);
+      const paddingLeft = parseInt(style.paddingLeft, 10);
+      const paddingTop = parseInt(style.paddingTop, 10);
+      const left = rect.left - hostRect.left + paddingLeft;
+      const top = rect.top - hostRect.top + paddingTop;
       const height = rect.height || 17;
 
       // Position composition view (the rendered composing text)
       if (compositionView && compositionView.classList.contains('active')) {
-        compositionView.style.position = 'absolute';
-        compositionView.style.left = `${left}px`;
-        compositionView.style.top = `${top}px`;
-        compositionView.style.right = 'auto';
-        compositionView.style.bottom = 'auto';
+        compositionView.style.setProperty('position', 'absolute', 'important');
+        compositionView.style.setProperty('left', `${left}px`, 'important');
+        compositionView.style.setProperty('top', `${top}px`, 'important');
+        compositionView.style.setProperty('right', 'auto', 'important');
+        compositionView.style.setProperty('bottom', 'auto', 'important');
       }
 
       // Position helper textarea (this is what OS uses to place IME

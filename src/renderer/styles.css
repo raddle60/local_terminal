@@ -288,6 +288,17 @@ body {
   width: 100%;
   height: 100%;
   background: #2d2d2d;
+  position: relative;
+}
+
+/* Terminal instance wrapper - sits inside terminal-container */
+.terminal-instance {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: #2d2d2d;
   padding: 8px;
 }
 
