@@ -50,14 +50,13 @@ export class TerminalView {
     this.terminal.open(this.xtermHostElement);
     this.fitAddon.fit();
 
-    // Fix cursor-position desync after window-focus change.
-    // When focus returns to the window, xterm's internal cursor state can
-    // diverge from the TUI app's rendered cursor (e.g. claude code).
-    // Sending ← then → with a 50ms gap forces the shell to emit fresh
+    // Fix cursor-position desync after window-focus change and IME input.
+    // When focus returns to the window, or after IME composition, xterm's
+    // internal cursor state can diverge from the TUI app's rendered cursor.
+    // Sending ← then → with a gap forces the shell to emit fresh
     // cursor-movement sequences that resync xterm's idea of the column.
     // Note: xterm.js 5.5's public API only exposes focus()/blur() methods,
     // not events, so we listen on the underlying textarea DOM element.
-    let wasFocused = true;
     const textarea = this.xtermHostElement.querySelector('textarea') as HTMLTextAreaElement | null;
     if (textarea) {
       // Dispatch keyboard events on the textarea to simulate arrow-key presses.
@@ -73,12 +72,19 @@ export class TerminalView {
         setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
         setTimeout(() => sendKey('ArrowRight', 39), 10);  // →
       };
+
+      // Always resync on focus to handle:
+      // 1. Window focus changes
+      // 2. IME composition end
+      // 3. Any other focus restoration
       textarea.addEventListener('focus', () => {
-        if (!wasFocused) resyncCursor();
-        wasFocused = true;
+        resyncCursor();
       });
-      textarea.addEventListener('blur', () => {
-        wasFocused = false;
+
+      // Also resync after composition end - IME can leave cursor out of sync
+      textarea.addEventListener('compositionend', () => {
+        // Small delay to let the composed character be processed
+        setTimeout(resyncCursor, 10);
       });
     }
 
