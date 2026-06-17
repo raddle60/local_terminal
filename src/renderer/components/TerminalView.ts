@@ -69,8 +69,9 @@ export class TerminalView {
         textarea.dispatchEvent(new KeyboardEvent('keyup', { key, keyCode, bubbles: true }));
       };
       const resyncCursor = () => {
-        setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
-        setTimeout(() => sendKey('ArrowRight', 39), 15);  // →
+        // TODO: 左移右移会触发功能，暂时禁用，等有解决办法时再放开
+        // setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
+        // setTimeout(() => sendKey('ArrowRight', 39), 15);  // →
       };
 
       // Resync on focus/blur to handle cursor desync with shell
