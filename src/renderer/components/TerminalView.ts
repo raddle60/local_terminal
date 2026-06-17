@@ -339,7 +339,7 @@ export class TerminalView {
     const paddingY = parseInt(style.paddingTop, 10) + parseInt(style.paddingBottom, 10);
     const availableWidth = this.element.clientWidth - paddingX;
     // Extra paddingY to prevent bottom row from being cut off
-    const availableHeight = this.element.clientHeight - paddingY - paddingY;
+    const availableHeight = this.element.clientHeight - paddingY - 3;
 
     // Temporarily resize the element to account for padding
     const originalWidth = this.element.style.width;
