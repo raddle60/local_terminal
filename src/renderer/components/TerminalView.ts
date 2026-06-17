@@ -70,14 +70,21 @@ export class TerminalView {
       };
       const resyncCursor = () => {
         setTimeout(() => sendKey('ArrowLeft', 37), 0);    // ←
-        setTimeout(() => sendKey('ArrowRight', 39), 10);  // →
+        setTimeout(() => sendKey('ArrowRight', 39), 15);  // →
       };
 
-      // Always resync on focus to handle:
-      // 1. Window focus changes
-      // 2. IME composition end
-      // 3. Any other focus restoration
+      // Resync on focus/blur to handle cursor desync with shell
+      // Focus events on textarea are more reliable for xterm input
       textarea.addEventListener('focus', () => {
+        resyncCursor();
+      });
+      textarea.addEventListener('blur', () => {
+        resyncCursor();
+      });
+
+      // Resync on mouse click - clicking in the terminal can desync
+      // the cursor position between xterm and the shell
+      this.xtermHostElement.addEventListener('click', () => {
         resyncCursor();
       });
 
@@ -331,7 +338,8 @@ export class TerminalView {
     const paddingX = parseInt(style.paddingLeft, 10) + parseInt(style.paddingRight, 10);
     const paddingY = parseInt(style.paddingTop, 10) + parseInt(style.paddingBottom, 10);
     const availableWidth = this.element.clientWidth - paddingX;
-    const availableHeight = this.element.clientHeight - paddingY;
+    // Extra paddingY to prevent bottom row from being cut off
+    const availableHeight = this.element.clientHeight - paddingY - paddingY;
 
     // Temporarily resize the element to account for padding
     const originalWidth = this.element.style.width;

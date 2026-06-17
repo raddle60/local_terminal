@@ -32,9 +32,14 @@ export class PtyManager {
   }): string {
     const shellId = `${profileId}-${this.shellCounter++}`;
 
+    // Clone env and set TERM to vt100 to disable mouse reporting.
+    // vt100 has no mouse support, so all mouse events are ignored by the shell.
+    // This prevents mouse clicks/clicks from interfering with cursor position.
+    const env = { ...process.env, TERM: 'vt100' };
+
     const shell = pty.spawn(config.shell, config.args, {
       cwd: expandEnvVars(config.cwd),
-      env: process.env as { [key: string]: string },
+      env,
     });
 
     const instance: ShellInstance = {
