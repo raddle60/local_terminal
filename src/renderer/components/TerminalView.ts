@@ -214,11 +214,16 @@ export class TerminalView {
   // roughly half: the TUI's paste handler / line buffer fills
   // up before it can process the leading characters, and only
   // the tail is rendered.
+  //
+  // Chunking strategy: Use 512-byte IPC-safe chunks with 20ms delay.
+  // Small enough to avoid IPC limits, large enough to not be too slow.
+  // The final PASTE_END is sent after a 50ms delay to ensure all data
+  // is processed by the TUI before we close the bracketed paste mode.
   private writeBracketed(text: string): void {
-    const CHUNK_SIZE = 64;
-    const CHUNK_DELAY_MS = 25;
     const PASTE_START = '\x1b[200~';
     const PASTE_END = '\x1b[201~';
+    const CHUNK_SIZE = 512;
+    const CHUNK_DELAY_MS = 20;
 
     if (text.length <= CHUNK_SIZE) {
       this.onDataCallback(PASTE_START + text + PASTE_END);
@@ -231,7 +236,11 @@ export class TerminalView {
     let offset = CHUNK_SIZE;
     const flushChunk = () => {
       if (offset >= text.length) {
-        this.onDataCallback(PASTE_END);
+        // Final chunk sent - wait before closing bracket to give TUI
+        // time to process all data
+        setTimeout(() => {
+          this.onDataCallback(PASTE_END);
+        }, 50);
         return;
       }
       const end = Math.min(offset + CHUNK_SIZE, text.length);
@@ -255,8 +264,8 @@ export class TerminalView {
   // Same chunking strategy as bracketed to avoid TUI input buffer
   // overflow on large pastes.
   private writePlain(text: string): void {
-    const CHUNK_SIZE = 64;
-    const CHUNK_DELAY_MS = 25;
+    const CHUNK_SIZE = 512;
+    const CHUNK_DELAY_MS = 20;
     const normalized = text.replace(/\r\n|\n|\r/g, '\r');
 
     if (normalized.length <= CHUNK_SIZE) {
